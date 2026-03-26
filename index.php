@@ -28,10 +28,12 @@ $router->post('/vehicles/store', [VehicleController::class, 'store'], true);
 $router->post('/vehicles/update', [VehicleController::class, 'update'], true);
 $router->post('/vehicles/delete', [VehicleController::class, 'delete'], true);
 $router->post('/vehicles/update-mileage', [VehicleController::class, 'updateMileage'], true);
+$router->get('/vehicles/mileage-history', [VehicleController::class, 'mileageHistory'], true);
 
 $router->get('/clients', [ClientController::class, 'index'], true);
 $router->post('/clients/store', [ClientController::class, 'store'], true);
 $router->post('/clients/update', [ClientController::class, 'update'], true);
+$router->get('/clients/document-download', [ClientController::class, 'downloadDocument'], true);
 
 $router->get('/rentals', [RentalController::class, 'index'], true);
 $router->post('/rentals/store', [RentalController::class, 'store'], true);

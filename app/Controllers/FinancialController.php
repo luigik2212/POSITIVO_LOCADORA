@@ -15,9 +15,13 @@ class FinancialController extends Controller
         $financial->generateWeeklyRentalCharges();
         $financial->generateRecurringEntries();
 
-        $from = $_GET['from'] ?? null;
-        $to = $_GET['to'] ?? null;
-        $entries = $financial->all($from, $to);
+        $from = $_GET['from'] ?? date('Y-m-01');
+        $to = $_GET['to'] ?? date('Y-m-t');
+        $tab = ($_GET['tab'] ?? 'payable') === 'receivable' ? 'receivable' : 'payable';
+        $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
+
+        $entries = $financial->all($from, $to, $tipo);
+        $upcomingDue = $financial->upcomingDue($tipo, 6);
 
         $totals = ['receitas' => 0.0, 'despesas' => 0.0, 'lucro' => 0.0];
         foreach ($entries as $entry) {
@@ -29,7 +33,7 @@ class FinancialController extends Controller
         }
         $totals['lucro'] = $totals['receitas'] - $totals['despesas'];
 
-        $this->view('financial/index', compact('entries', 'totals', 'from', 'to'));
+        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'upcomingDue'));
     }
 
     public function store(): void

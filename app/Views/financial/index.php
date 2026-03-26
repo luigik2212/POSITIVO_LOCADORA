@@ -4,15 +4,44 @@
   <div class="col-md-4"><div class="card card-kpi"><div class="card-body"><h6>Despesas</h6><h3 class="text-danger">R$ <?= number_format($totals['despesas'],2,',','.') ?></h3></div></div></div>
   <div class="col-md-4"><div class="card card-kpi"><div class="card-body"><h6>Lucro / Prejuízo</h6><h3 class="<?= $totals['lucro']>=0?'text-primary':'text-danger' ?>">R$ <?= number_format($totals['lucro'],2,',','.') ?></h3></div></div></div>
 </div>
+
+<div class="card mb-3">
+  <div class="card-header">Próximos vencimentos</div>
+  <div class="list-group list-group-flush">
+    <?php if (!$upcomingDue): ?>
+      <div class="list-group-item text-muted">Nenhum lançamento pendente para os próximos dias.</div>
+    <?php else: foreach ($upcomingDue as $idx => $due): ?>
+      <div class="list-group-item d-flex justify-content-between align-items-center <?= $idx === 0 ? 'financial-due-soon' : '' ?>">
+        <div>
+          <strong><?= esc($due['descricao']) ?></strong>
+          <div class="small text-muted"><?= esc(date('d/m/Y', strtotime((string)$due['data_movimentacao']))) ?> • <?= esc($due['categoria']) ?></div>
+        </div>
+        <span class="badge <?= $idx === 0 ? 'bg-danger' : 'bg-warning text-dark' ?>">R$ <?= number_format($due['valor'],2,',','.') ?></span>
+      </div>
+    <?php endforeach; endif; ?>
+  </div>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <form method="GET" class="d-flex gap-2"><input type="date" name="from" class="form-control" value="<?= esc($from??'') ?>"><input type="date" name="to" class="form-control" value="<?= esc($to??'') ?>"><button class="btn btn-outline-primary">Filtrar</button></form>
+  <form method="GET" class="d-flex gap-2">
+    <input type="hidden" name="tab" value="<?= esc($tab) ?>">
+    <input type="date" name="from" class="form-control" value="<?= esc($from??'') ?>">
+    <input type="date" name="to" class="form-control" value="<?= esc($to??'') ?>">
+    <button class="btn btn-outline-primary">Filtrar</button>
+  </form>
   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal" onclick="openFinancialModal()">Nova movimentação</button>
 </div>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link <?= $tab === 'payable' ? 'active' : '' ?>" href="<?= url('/financial') ?>?tab=payable&from=<?= esc($from) ?>&to=<?= esc($to) ?>">Contas a pagar</a></li>
+  <li class="nav-item"><a class="nav-link <?= $tab === 'receivable' ? 'active' : '' ?>" href="<?= url('/financial') ?>?tab=receivable&from=<?= esc($from) ?>&to=<?= esc($to) ?>">Contas a receber</a></li>
+</ul>
+
 <div class="table-responsive">
 <table class="table table-striped align-middle">
   <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><th>Cliente</th><th class="text-end">Ações</th></tr></thead>
   <tbody><?php foreach($entries as $e): ?><tr>
-    <td><?= esc($e['data_movimentacao']) ?></td><td><?= esc($e['tipo']) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
+    <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['tipo']) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
     <td>R$ <?= number_format($e['valor'],2,',','.') ?></td>
     <td>
       <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center">

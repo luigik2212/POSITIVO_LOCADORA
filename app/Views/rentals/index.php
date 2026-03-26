@@ -1,7 +1,7 @@
 <?php require __DIR__ . '/../partials/header.php'; ?>
 <div class="d-flex justify-content-between mb-3">
 <form method="GET" class="row g-2">
-  <div class="col"><select name="status" class="form-select"><option value="">Status</option><?php foreach(['ativa','finalizada','cancelada'] as $s): ?><option value="<?= $s ?>" <?= (($filters['status']??'')===$s)?'selected':'' ?>><?= ucfirst($s) ?></option><?php endforeach; ?></select></div>
+  <div class="col"><select name="status" class="form-select"><option value="">Todos os status</option><?php foreach(['ativa','finalizada','cancelada'] as $s): ?><option value="<?= $s ?>" <?= (($filters['status']??'')===$s)?'selected':'' ?>><?= ucfirst($s) ?></option><?php endforeach; ?></select></div>
   <div class="col"><select name="billing_type" class="form-select"><option value="">Cobrança</option><?php foreach(['diaria','semanal','mensal'] as $t): ?><option value="<?= $t ?>" <?= (($filters['billing_type']??'')===$t)?'selected':'' ?>><?= ucfirst($t) ?></option><?php endforeach; ?></select></div>
   <div class="col"><input type="date" name="from" class="form-control" value="<?= esc($filters['from']??'') ?>"></div>
   <div class="col"><input type="date" name="to" class="form-control" value="<?= esc($filters['to']??'') ?>"></div>
@@ -9,12 +9,34 @@
 </form>
 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rentalModal">Nova locação</button>
 </div>
-<table class="table table-striped"><thead><tr><th>Cliente</th><th>Veículo</th><th>Tipo</th><th>Previsto</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-<?php foreach($rentals as $r): ?><tr><td><?= esc($r['cliente_nome']) ?></td><td><?= esc($r['veiculo_nome']) ?> (<?= esc($r['placa']) ?>)</td><td><?= esc($r['tipo_cobranca']) ?></td><td>R$ <?= number_format($r['valor_total_previsto'],2,',','.') ?></td><td><?= esc($r['status']) ?></td><td>
-<?php if($r['status']==='ativa'): ?>
-<button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#finalizeModal" onclick='fillFinalize(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Devolver</button>
-<form method="POST" action="<?= url('/rentals/cancel') ?>" class="d-inline" onsubmit="return confirm('Cancelar locação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn btn-sm btn-danger">Cancelar</button></form>
-<?php endif; ?></td></tr><?php endforeach; ?></tbody></table>
+<table class="table table-striped"><thead><tr><th>Cliente</th><th>Veículo</th><th>Tipo</th><th>Início</th><th>Fim</th><th>Previsto</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+<?php foreach($rentals as $r): ?><tr><td><?= esc($r['cliente_nome']) ?></td><td><?= esc($r['veiculo_nome']) ?> (<?= esc($r['placa']) ?>)</td><td><?= esc($r['tipo_cobranca']) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$r['data_inicio']))) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$r['data_prevista_termino']))) ?></td><td>R$ <?= number_format($r['valor_total_previsto'],2,',','.') ?></td><td><?= esc($r['status']) ?></td><td>
+<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewRentalModal" onclick='openRentalView(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)' title="Visualizar">👁️</button>
+</td></tr><?php endforeach; ?></tbody></table>
+
+<div class="modal fade" id="viewRentalModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5>Detalhes da locação</h5></div><div class="modal-body row g-2">
+<div class="col-md-6"><strong>Cliente:</strong> <span id="view_cliente"></span></div>
+<div class="col-md-6"><strong>Veículo:</strong> <span id="view_veiculo"></span></div>
+<div class="col-md-4"><strong>Status:</strong> <span id="view_status"></span></div>
+<div class="col-md-4"><strong>Tipo cobrança:</strong> <span id="view_tipo"></span></div>
+<div class="col-md-4"><strong>Tempo contrato:</strong> <span id="view_tempo"></span></div>
+<div class="col-md-4"><strong>Início:</strong> <span id="view_inicio"></span></div>
+<div class="col-md-4"><strong>Fim previsto:</strong> <span id="view_fim"></span></div>
+<div class="col-md-4"><strong>KM saída:</strong> <span id="view_km_saida"></span></div>
+<div class="col-md-6"><strong>Valor previsto:</strong> <span id="view_valor"></span></div>
+<div class="col-md-6"><strong>Caução:</strong> <span id="view_caucao"></span></div>
+<div class="col-12"><strong>Observações:</strong> <span id="view_obs"></span></div>
+<div class="col-12 d-none" id="view_actions_wrap">
+  <div class="border rounded p-2 d-flex gap-2">
+    <button type="button" class="btn btn-success btn-sm" id="view_devolver_btn" data-bs-toggle="modal" data-bs-target="#finalizeModal" data-bs-dismiss="modal">Devolver</button>
+    <form method="POST" action="<?= url('/rentals/cancel') ?>" class="d-inline" onsubmit="return confirm('Cancelar locação?')">
+      <input type="hidden" name="_token" value="<?= csrfToken() ?>">
+      <input type="hidden" name="id" id="view_cancel_id">
+      <button class="btn btn-danger btn-sm">Cancelar locação</button>
+    </form>
+  </div>
+</div>
+</div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button></div></div></div></div>
 
 <div class="modal fade" id="rentalModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><form method="POST" action="<?= url('/rentals/store') ?>" enctype="multipart/form-data" id="rentalForm"><div class="modal-header"><h5>Nova locação</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>">

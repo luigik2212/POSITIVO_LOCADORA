@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Models\MileageHistory;
 use App\Models\Vehicle;
 
 class VehicleController extends Controller
@@ -14,6 +15,13 @@ class VehicleController extends Controller
         $vehicleModel = new Vehicle();
         $this->view('vehicles/index', [
             'vehicles' => $vehicleModel->all($_GET['search'] ?? null, $_GET['status'] ?? null),
+        ]);
+    }
+
+    public function mileageHistory(): void
+    {
+        $this->view('vehicles/mileage-history', [
+            'history' => (new MileageHistory())->all(),
         ]);
     }
 
@@ -33,13 +41,27 @@ class VehicleController extends Controller
     public function update(): void
     {
         validateCsrf();
+        $vehicleModel = new Vehicle();
+
         $data = $this->vehiclePayload();
         if (!$this->validateRequired($data)) {
             $this->redirect('/vehicles');
         }
 
         $data['id'] = (int)($_POST['id'] ?? 0);
-        (new Vehicle())->update($data);
+        $before = $vehicleModel->find($data['id']);
+
+        $vehicleModel->update($data);
+
+        if ($before && (int)$before['quilometragem_atual'] !== (int)$data['quilometragem_atual']) {
+            (new MileageHistory())->create(
+                $data['id'],
+                (int)$before['quilometragem_atual'],
+                (int)$data['quilometragem_atual'],
+                'edicao_manual'
+            );
+        }
+
         flash('success', 'Veículo atualizado com sucesso.');
         $this->redirect('/vehicles');
     }
@@ -67,7 +89,17 @@ class VehicleController extends Controller
     public function updateMileage(): void
     {
         validateCsrf();
-        (new Vehicle())->updateMileage((int)$_POST['id'], (int)$_POST['quilometragem_atual']);
+        $vehicleId = (int)$_POST['id'];
+        $kmNovo = (int)$_POST['quilometragem_atual'];
+
+        $vehicleModel = new Vehicle();
+        $before = $vehicleModel->find($vehicleId);
+        $vehicleModel->updateMileage($vehicleId, $kmNovo);
+
+        if ($before && (int)$before['quilometragem_atual'] !== $kmNovo) {
+            (new MileageHistory())->create($vehicleId, (int)$before['quilometragem_atual'], $kmNovo, 'edicao_manual');
+        }
+
         flash('success', 'Quilometragem atualizada.');
         $this->redirect('/vehicles');
     }

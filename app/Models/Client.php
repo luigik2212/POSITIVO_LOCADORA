@@ -20,10 +20,11 @@ class Client extends BaseModel
         return $stmt->fetchAll();
     }
 
-    public function create(array $data): void
+    public function create(array $data): int
     {
         $stmt = $this->db->prepare('INSERT INTO clients (nome_completo, cpf, rg, cnh, validade_cnh, telefone, email, endereco_completo, observacoes) VALUES (:nome_completo,:cpf,:rg,:cnh,:validade_cnh,:telefone,:email,:endereco_completo,:observacoes)');
         $stmt->execute($data);
+        return (int)$this->db->lastInsertId();
     }
 
     public function update(array $data): void

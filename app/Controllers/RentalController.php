@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Models\Checklist;
+use App\Models\Client;
+use App\Models\FinancialEntry;
+use App\Models\MileageHistory;
 use App\Models\Rental;
 use App\Models\Vehicle;
-use App\Models\Client;
-use App\Models\Checklist;
-use App\Models\FinancialEntry;
 
 class RentalController extends Controller
 {
@@ -19,8 +20,9 @@ class RentalController extends Controller
         $clientModel = new Client();
         $vehicleModel = new Vehicle();
 
+        $status = $_GET['status'] ?? 'ativa';
         $filters = [
-            'status' => $_GET['status'] ?? null,
+            'status' => $status,
             'billing_type' => $_GET['billing_type'] ?? null,
             'client_id' => $_GET['client_id'] ?? null,
             'vehicle_id' => $_GET['vehicle_id'] ?? null,
@@ -124,7 +126,12 @@ class RentalController extends Controller
 
         $statusVeiculo = $_POST['retornar_para_manutencao'] === '1' ? 'manutencao' : 'disponivel';
         $vehicleModel = new Vehicle();
+        $vehicleBefore = $vehicleModel->find((int)$rental['vehicle_id']);
         $vehicleModel->setStatus((int)$rental['vehicle_id'], $statusVeiculo);
+
+        if ($vehicleBefore && (int)$vehicleBefore['quilometragem_atual'] !== $kmRetorno) {
+            (new MileageHistory())->create((int)$rental['vehicle_id'], (int)$vehicleBefore['quilometragem_atual'], $kmRetorno, 'devolucao');
+        }
         $vehicleModel->updateMileage((int)$rental['vehicle_id'], $kmRetorno);
 
         $this->saveChecklist($rentalId, 'devolucao');
