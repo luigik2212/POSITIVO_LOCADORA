@@ -13,10 +13,10 @@
 <?php foreach($rentals as $r): ?><tr><td><?= esc($r['cliente_nome']) ?></td><td><?= esc($r['veiculo_nome']) ?> (<?= esc($r['placa']) ?>)</td><td><?= esc($r['tipo_cobranca']) ?></td><td>R$ <?= number_format($r['valor_total_previsto'],2,',','.') ?></td><td><?= esc($r['status']) ?></td><td>
 <?php if($r['status']==='ativa'): ?>
 <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#finalizeModal" onclick='fillFinalize(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Devolver</button>
-<form method="POST" action="/rentals/cancel" class="d-inline" onsubmit="return confirm('Cancelar locação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn btn-sm btn-danger">Cancelar</button></form>
+<form method="POST" action="<?= url('/rentals/cancel') ?>" class="d-inline" onsubmit="return confirm('Cancelar locação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn btn-sm btn-danger">Cancelar</button></form>
 <?php endif; ?></td></tr><?php endforeach; ?></tbody></table>
 
-<div class="modal fade" id="rentalModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><form method="POST" action="/rentals/store" enctype="multipart/form-data" id="rentalForm"><div class="modal-header"><h5>Nova locação</h5></div><div class="modal-body row g-2">
+<div class="modal fade" id="rentalModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><form method="POST" action="<?= url('/rentals/store') ?>" enctype="multipart/form-data" id="rentalForm"><div class="modal-header"><h5>Nova locação</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>">
 <div class="col-md-6"><label class="form-label">Cliente</label><select required name="client_id" class="form-select" id="clientSelect"><?php foreach($clients as $c): ?><option value="<?= $c['id'] ?>" data-cpf="<?= esc($c['cpf']) ?>"><?= esc($c['nome_completo']) ?> - <?= esc($c['cpf']) ?></option><?php endforeach; ?></select></div>
 <div class="col-md-6"><label class="form-label">Veículo (apenas disponíveis)</label><select required name="vehicle_id" class="form-select" id="vehicleSelect"><?php foreach($vehicles as $v): ?><option value="<?= $v['id'] ?>" data-diaria="<?= $v['valor_diaria'] ?>" data-semanal="<?= $v['valor_semanal'] ?>" data-mensal="<?= $v['valor_mensal'] ?>"><?= esc($v['nome']) ?> - <?= esc($v['placa']) ?></option><?php endforeach; ?></select></div>
@@ -34,7 +34,7 @@
 <div class="col-12"><label class="form-label">Anexos entrega (foto/vídeo)</label><input class="form-control" type="file" name="anexos_entrega[]" multiple accept="image/*,video/*"></div>
 </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button class="btn btn-primary">Salvar locação</button></div></form></div></div></div>
 
-<div class="modal fade" id="finalizeModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><form method="POST" action="/rentals/finalize" enctype="multipart/form-data"><div class="modal-header"><h5>Finalizar locação</h5></div><div class="modal-body row g-2">
+<div class="modal fade" id="finalizeModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><form method="POST" action="<?= url('/rentals/finalize') ?>" enctype="multipart/form-data"><div class="modal-header"><h5>Finalizar locação</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" id="finalize_id">
 <div class="col-md-6"><label class="form-label">Data real término</label><input type="date" class="form-control" name="data_real_termino" required></div>
 <div class="col-md-6"><label class="form-label">KM retorno</label><input type="number" class="form-control" name="quilometragem_retorno" required></div>

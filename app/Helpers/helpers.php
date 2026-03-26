@@ -2,6 +2,26 @@
 
 declare(strict_types=1);
 
+function appBasePath(): string
+{
+    return defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+}
+
+function url(string $path = '/'): string
+{
+    $normalizedPath = '/' . ltrim($path, '/');
+    if ($normalizedPath === '//') {
+        $normalizedPath = '/';
+    }
+
+    $base = appBasePath();
+    if ($normalizedPath === '/') {
+        return $base !== '' ? $base : '/';
+    }
+
+    return ($base !== '' ? $base : '') . $normalizedPath;
+}
+
 function isAuthenticated(): bool
 {
     return isset($_SESSION['user']);
