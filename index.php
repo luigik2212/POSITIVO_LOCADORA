@@ -26,7 +26,7 @@ $router->get('/', [DashboardController::class, 'index'], true);
 $router->get('/vehicles', [VehicleController::class, 'index'], true);
 $router->post('/vehicles/store', [VehicleController::class, 'store'], true);
 $router->post('/vehicles/update', [VehicleController::class, 'update'], true);
-$router->post('/vehicles/inactivate', [VehicleController::class, 'inactivate'], true);
+$router->post('/vehicles/delete', [VehicleController::class, 'delete'], true);
 $router->post('/vehicles/update-mileage', [VehicleController::class, 'updateMileage'], true);
 
 $router->get('/clients', [ClientController::class, 'index'], true);
@@ -44,5 +44,8 @@ $router->post('/maintenances/update-status', [MaintenanceController::class, 'upd
 
 $router->get('/financial', [FinancialController::class, 'index'], true);
 $router->post('/financial/store', [FinancialController::class, 'store'], true);
+$router->post('/financial/update', [FinancialController::class, 'update'], true);
+$router->post('/financial/delete', [FinancialController::class, 'delete'], true);
+$router->post('/financial/payment-status', [FinancialController::class, 'updatePaymentStatus'], true);
 
 $router->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
