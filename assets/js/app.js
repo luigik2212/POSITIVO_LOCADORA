@@ -57,7 +57,7 @@ function openClientModal(client = null) {
   }
 }
 
-function openFinancialModal(entry = null) {
+function openFinancialModal(entry = null, currentTab = 'payable') {
   const form = document.getElementById('financialForm');
   if (!form) return;
   form.action = entry ? withBase('/financial/update') : withBase('/financial/store');
@@ -72,6 +72,18 @@ function openFinancialModal(entry = null) {
     }
     el.value = entry?.[k] ?? (k === 'pagamento_status' ? 'nao_pago' : '');
   });
+
+  const tab = currentTab === 'receivable' ? 'receivable' : 'payable';
+  const fixedTipo = tab === 'receivable' ? 'receita' : 'despesa';
+
+  const tabInput = document.getElementById('f_tab');
+  if (tabInput) tabInput.value = tab;
+
+  const tipoField = document.getElementById('f_tipo');
+  if (tipoField) {
+    tipoField.value = fixedTipo;
+    tipoField.disabled = true;
+  }
 
   if (!entry) {
     const status = document.getElementById('f_pagamento_status');
