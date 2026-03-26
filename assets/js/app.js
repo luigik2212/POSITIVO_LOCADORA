@@ -27,6 +27,37 @@ function openClientModal(client = null) {
   });
 }
 
+function openFinancialModal(entry = null) {
+  const form = document.getElementById('financialForm');
+  if (!form) return;
+  form.action = entry ? withBase('/financial/update') : withBase('/financial/store');
+  const fields = ['id','tipo','categoria','descricao','valor','data_movimentacao','vehicle_id','client_id','pagamento_status','recorrente','recorrencia_periodo'];
+
+  fields.forEach((k) => {
+    const el = document.getElementById('f_' + k);
+    if (!el) return;
+    if (k === 'recorrente') {
+      el.value = entry?.[k] ? '1' : '0';
+      return;
+    }
+    el.value = entry?.[k] ?? (k === 'pagamento_status' ? 'nao_pago' : '');
+  });
+
+  if (!entry) {
+    const status = document.getElementById('f_pagamento_status');
+    if (status) status.value = 'nao_pago';
+  }
+
+  toggleRecurring();
+}
+
+function toggleRecurring() {
+  const recurring = document.getElementById('f_recorrente');
+  const wrap = document.getElementById('recorrencia_wrap');
+  if (!recurring || !wrap) return;
+  wrap.classList.toggle('d-none', recurring.value !== '1');
+}
+
 function fillFinalize(rental) {
   const field = document.getElementById('finalize_id');
   if (field) field.value = rental.id;
@@ -53,4 +84,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.addEventListener('input', updatePricePreview);
   });
   updatePricePreview();
+  toggleRecurring();
 });

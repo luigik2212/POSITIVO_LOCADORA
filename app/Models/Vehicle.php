@@ -18,7 +18,7 @@ class Vehicle extends BaseModel
             $sql .= ' AND status = :status';
             $params['status'] = $status;
         }
-        $sql .= ' ORDER BY id DESC';
+        $sql .= ' ORDER BY id ASC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
@@ -34,6 +34,12 @@ class Vehicle extends BaseModel
     {
         $stmt = $this->db->prepare('UPDATE vehicles SET nome=:nome, marca=:marca, modelo=:modelo, ano=:ano, placa=:placa, renavam=:renavam, cor=:cor, quilometragem_atual=:quilometragem_atual, categoria=:categoria, valor_diaria=:valor_diaria, valor_semanal=:valor_semanal, valor_mensal=:valor_mensal, status=:status, observacoes=:observacoes WHERE id=:id');
         $stmt->execute($data);
+    }
+
+    public function delete(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM vehicles WHERE id = :id');
+        $stmt->execute(['id' => $id]);
     }
 
     public function setStatus(int $id, string $status): void
