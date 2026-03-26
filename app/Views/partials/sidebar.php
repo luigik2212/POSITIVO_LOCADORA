@@ -1,6 +1,6 @@
 <nav class="col-md-2 d-md-block sidebar py-4">
     <div class="d-flex flex-column h-100 px-2">
-        <h5 class="text-white text-center mb-4">Positivo Locadora</h5>
+        <h5 class="text-white text-center mb-4">Locadora</h5>
         <ul class="nav flex-column">
             <li class="nav-item"><a class="nav-link" href="<?= url('/') ?>">Dashboard</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles') ?>">Veículos</a></li>
