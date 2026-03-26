@@ -28,8 +28,14 @@ class Database
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 ]);
             } catch (PDOException $e) {
+                error_log('Erro de conexão com banco: ' . $e->getMessage());
                 http_response_code(500);
-                exit('Erro de conexão com banco: ' . $e->getMessage());
+
+                if (defined('APP_DEBUG') && APP_DEBUG) {
+                    exit('Erro de conexão com banco: ' . $e->getMessage());
+                }
+
+                exit('Erro interno ao conectar no banco de dados. Verifique o arquivo .env.');
             }
         }
 

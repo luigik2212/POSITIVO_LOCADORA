@@ -1,64 +1,77 @@
 # POSITIVO LOCADORA (PHP MVC)
 
-Sistema web administrativo para locadora de carros com PHP + PDO + MySQL + Bootstrap.
+Sistema web administrativo para locadora de carros com PHP + PDO + MySQL + Bootstrap, preparado para rodar em hospedagem compartilhada (ex.: Hostinger) com `index.php` na raiz do `public_html`.
 
-## 1) Arquitetura
+## 1) Estrutura de produção (Hostinger)
 
-Estrutura em MVC para facilitar manutenção e expansão futura:
+Use exatamente esta estrutura dentro de `public_html`:
 
-- `public/` ponto de entrada (`index.php`) e assets estáticos
-- `app/Core` roteador, conexão PDO, controller base
-- `app/Controllers` regras de fluxo por módulo
-- `app/Models` acesso a dados com prepared statements
-- `app/Views` telas Bootstrap responsivas
-- `database/schema.sql` criação de banco + seed inicial
+```text
+public_html/
+├── app/
+├── assets/
+├── database/
+├── public/                # compatibilidade legada (opcional)
+├── uploads/
+├── .env                   # recomendado
+├── .env.example
+├── .htaccess
+├── index.php
+└── README.md
+```
 
-## 2) Instalação local
+> Observação: a aplicação agora funciona com `index.php` e `.htaccess` na raiz. A pasta `public/` ficou apenas para compatibilidade.
+
+## 2) Configuração rápida
 
 1. Copie variáveis:
    ```bash
    cp .env.example .env
    ```
-2. Ajuste credenciais MySQL no `.env`.
-3. Crie banco e tabelas:
+2. Ajuste credenciais do MySQL no `.env`.
+3. Importe o banco:
    ```bash
-   mysql -u root -p < database/schema.sql
+   mysql -u SEU_USUARIO -p SEU_BANCO < database/schema.sql
    ```
-4. Rode servidor PHP:
-   ```bash
-   php -S localhost:8000 -t public
-   ```
-5. Acesse: `http://localhost:8000/login`
+4. Acesse no domínio: `https://seu-dominio.com/login`
 
 ## 3) Usuário inicial
 
 - Login: `admin`
 - Senha: `1234`
-- Senha armazenada com hash seguro (`password_hash`).
+- Seed em `database/schema.sql` com senha em hash seguro (`password_hash`).
 
-## 4) Módulos implementados
+## 4) Variáveis de ambiente
 
-- Autenticação com sessão, logout e proteção de rotas
-- Dashboard com indicadores e listas operacionais
-- Veículos (CRUD com modal, busca, inativação, quilometragem)
-- Clientes (CRUD, busca, histórico de locações)
-- Locações (criação, devolução, cancelamento, filtros)
-- Regra de cobrança diária/semanal/mensal com cálculo automático
-- Checklist de entrega/devolução com upload de foto e vídeo
-- Manutenções (registro, conclusão, vínculo com status do veículo)
-- Finanças (receitas/despesas, filtros e consolidação)
+Exemplo (`.env`):
 
-## 5) Decisões técnicas importantes
+```dotenv
+APP_ENV=production
+APP_DEBUG=0
+APP_URL=https://seu-dominio.com
 
-- **PDO + prepared statements** em todos os módulos (proteção contra SQL injection).
-- **Router simples** com flag de autenticação por rota.
-- **CSRF token** para ações POST.
-- **Uploads controlados por MIME** (imagem/vídeo) em checklist.
-- **Separação de responsabilidades** entre camada de view/controller/model.
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=locadora
+DB_USER=seu_usuario_mysql
+DB_PASS=sua_senha_mysql
+```
 
-## 6) Próximos passos sugeridos
+### Debug local
 
-- Controle de permissões por perfil (RBAC).
-- API REST para integrações.
-- Logs de auditoria.
-- Testes automatizados (PHPUnit) e migrations.
+Para diagnosticar erro HTTP 500 em ambiente de desenvolvimento, use:
+
+```dotenv
+APP_ENV=local
+APP_DEBUG=1
+```
+
+Em produção, mantenha `APP_DEBUG=0`.
+
+## 5) Notas de compatibilidade Hostinger
+
+- Projeto sem Docker/Node/Composer obrigatório.
+- Funciona com PHP 8.1+ / 8.2.
+- Rotas amigáveis via `.htaccess` na raiz.
+- Assets e uploads servidos pela raiz (`/assets`, `/uploads`).
+- Se existir estrutura antiga em `/public`, o `.htaccess` mantém fallback automático.
