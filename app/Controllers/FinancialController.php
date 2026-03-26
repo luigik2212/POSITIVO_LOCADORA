@@ -21,19 +21,16 @@ class FinancialController extends Controller
         $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
 
         $entries = $financial->all($from, $to, $tipo);
-        $upcomingDue = $financial->upcomingDue($tipo, 6);
-
-        $totals = ['receitas' => 0.0, 'despesas' => 0.0, 'lucro' => 0.0];
+        $totals = ['total' => 0.0, 'paid' => 0.0];
         foreach ($entries as $entry) {
-            if ($entry['tipo'] === 'receita') {
-                $totals['receitas'] += (float)$entry['valor'];
-            } else {
-                $totals['despesas'] += (float)$entry['valor'];
+            $value = (float)$entry['valor'];
+            $totals['total'] += $value;
+            if (($entry['pagamento_status'] ?? 'nao_pago') === 'pago') {
+                $totals['paid'] += $value;
             }
         }
-        $totals['lucro'] = $totals['receitas'] - $totals['despesas'];
 
-        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'upcomingDue'));
+        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab'));
     }
 
     public function store(): void
@@ -42,7 +39,7 @@ class FinancialController extends Controller
         (new FinancialEntry())->create($this->payload());
 
         flash('success', 'Movimentação financeira cadastrada.');
-        $this->redirect('/financial');
+        $this->redirectWithFilters();
     }
 
     public function update(): void
@@ -52,7 +49,7 @@ class FinancialController extends Controller
         $payload['id'] = (int)($_POST['id'] ?? 0);
         (new FinancialEntry())->update($payload);
         flash('success', 'Movimentação financeira atualizada.');
-        $this->redirect('/financial');
+        $this->redirectWithFilters();
     }
 
     public function delete(): void
@@ -60,7 +57,7 @@ class FinancialController extends Controller
         validateCsrf();
         (new FinancialEntry())->delete((int)($_POST['id'] ?? 0));
         flash('success', 'Movimentação financeira excluída.');
-        $this->redirect('/financial');
+        $this->redirectWithFilters();
     }
 
     public function updatePaymentStatus(): void
@@ -69,7 +66,7 @@ class FinancialController extends Controller
         $status = ($_POST['pagamento_status'] ?? 'nao_pago') === 'pago' ? 'pago' : 'nao_pago';
         (new FinancialEntry())->updatePaymentStatus((int)($_POST['id'] ?? 0), $status);
         flash('success', 'Status de pagamento atualizado.');
-        $this->redirect('/financial');
+        $this->redirectWithFilters();
     }
 
     public function report(): void
@@ -93,9 +90,11 @@ class FinancialController extends Controller
     private function payload(): array
     {
         $isRecurring = isset($_POST['recorrente']) && $_POST['recorrente'] === '1';
+        $tab = ($_POST['tab'] ?? $_GET['tab'] ?? 'payable') === 'receivable' ? 'receivable' : 'payable';
+        $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
 
         return [
-            'tipo' => $_POST['tipo'],
+            'tipo' => $tipo,
             'categoria' => trim((string)$_POST['categoria']),
             'descricao' => trim((string)$_POST['descricao']),
             'valor' => (float)$_POST['valor'],
@@ -109,5 +108,19 @@ class FinancialController extends Controller
             'recorrencia_periodo' => $isRecurring ? ($_POST['recorrencia_periodo'] ?? 'mensal') : null,
             'referencia_data' => $_POST['data_movimentacao'],
         ];
+    }
+
+    private function redirectWithFilters(): void
+    {
+        $tab = ($_POST['tab'] ?? 'payable') === 'receivable' ? 'receivable' : 'payable';
+        $from = $_POST['from'] ?? date('Y-m-01');
+        $to = $_POST['to'] ?? date('Y-m-t');
+
+        $query = http_build_query([
+            'tab' => $tab,
+            'from' => $from,
+            'to' => $to,
+        ]);
+        $this->redirect('/financial?' . $query);
     }
 }

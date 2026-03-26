@@ -1,25 +1,12 @@
 <?php require __DIR__ . '/../partials/header.php'; ?>
 <div class="row g-3 mb-3">
-  <div class="col-md-4"><div class="card card-kpi"><div class="card-body"><h6>Receitas</h6><h3 class="text-success">R$ <?= number_format($totals['receitas'],2,',','.') ?></h3></div></div></div>
-  <div class="col-md-4"><div class="card card-kpi"><div class="card-body"><h6>Despesas</h6><h3 class="text-danger">R$ <?= number_format($totals['despesas'],2,',','.') ?></h3></div></div></div>
-  <div class="col-md-4"><div class="card card-kpi"><div class="card-body"><h6>Lucro / Prejuízo</h6><h3 class="<?= $totals['lucro']>=0?'text-primary':'text-danger' ?>">R$ <?= number_format($totals['lucro'],2,',','.') ?></h3></div></div></div>
-</div>
-
-<div class="card mb-3">
-  <div class="card-header">Próximos vencimentos</div>
-  <div class="list-group list-group-flush">
-    <?php if (!$upcomingDue): ?>
-      <div class="list-group-item text-muted">Nenhum lançamento pendente para os próximos dias.</div>
-    <?php else: foreach ($upcomingDue as $idx => $due): ?>
-      <div class="list-group-item d-flex justify-content-between align-items-center <?= $idx === 0 ? 'financial-due-soon' : '' ?>">
-        <div>
-          <strong><?= esc($due['descricao']) ?></strong>
-          <div class="small text-muted"><?= esc(date('d/m/Y', strtotime((string)$due['data_movimentacao']))) ?> • <?= esc($due['categoria']) ?></div>
-        </div>
-        <span class="badge <?= $idx === 0 ? 'bg-danger' : 'bg-warning text-dark' ?>">R$ <?= number_format($due['valor'],2,',','.') ?></span>
-      </div>
-    <?php endforeach; endif; ?>
-  </div>
+  <?php if ($tab === 'payable'): ?>
+    <div class="col-md-6"><div class="card card-kpi"><div class="card-body"><h6>Despesas totais</h6><h3 class="text-danger">R$ <?= number_format($totals['total'],2,',','.') ?></h3></div></div></div>
+    <div class="col-md-6"><div class="card card-kpi"><div class="card-body"><h6>Despesas pagas</h6><h3 class="text-primary">R$ <?= number_format($totals['paid'],2,',','.') ?></h3></div></div></div>
+  <?php else: ?>
+    <div class="col-md-6"><div class="card card-kpi"><div class="card-body"><h6>Receitas totais</h6><h3 class="text-success">R$ <?= number_format($totals['total'],2,',','.') ?></h3></div></div></div>
+    <div class="col-md-6"><div class="card card-kpi"><div class="card-body"><h6>Receitas recebidas</h6><h3 class="text-primary">R$ <?= number_format($totals['paid'],2,',','.') ?></h3></div></div></div>
+  <?php endif; ?>
 </div>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -31,7 +18,7 @@
   </form>
   <div class="d-flex gap-2">
     <a class="btn btn-outline-secondary" href="<?= url('/financial/report') ?>?from=<?= esc($from) ?>&to=<?= esc($to) ?>">Relatório financeiro</a>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal" onclick="openFinancialModal()">Nova movimentação</button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal" onclick="openFinancialModal(null, '<?= esc($tab) ?>')">Nova movimentação</button>
   </div>
 </div>
 
@@ -50,6 +37,9 @@
       <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center">
         <input type="hidden" name="_token" value="<?= csrfToken() ?>">
         <input type="hidden" name="id" value="<?= $e['id'] ?>">
+        <input type="hidden" name="tab" value="<?= esc($tab) ?>">
+        <input type="hidden" name="from" value="<?= esc($from) ?>">
+        <input type="hidden" name="to" value="<?= esc($to) ?>">
         <select class="form-select form-select-sm" name="pagamento_status" onchange="this.form.submit()">
           <option value="nao_pago" <?= ($e['pagamento_status'] ?? 'nao_pago') === 'nao_pago' ? 'selected' : '' ?>>Não pago</option>
           <option value="pago" <?= ($e['pagamento_status'] ?? '') === 'pago' ? 'selected' : '' ?>>Pago</option>
@@ -58,14 +48,14 @@
     </td>
     <td><?= esc($e['veiculo_nome']) ?></td><td><?= esc($e['cliente_nome']) ?></td>
     <td class="text-end">
-      <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#financialModal" onclick='openFinancialModal(<?= json_encode($e, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Editar</button>
-      <form method="POST" action="<?= url('/financial/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir movimentação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $e['id'] ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
+      <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#financialModal" onclick='openFinancialModal(<?= json_encode($e, JSON_HEX_APOS|JSON_HEX_QUOT) ?>, "<?= esc($tab) ?>")'>Editar</button>
+      <form method="POST" action="<?= url('/financial/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir movimentação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $e['id'] ?>"><input type="hidden" name="tab" value="<?= esc($tab) ?>"><input type="hidden" name="from" value="<?= esc($from) ?>"><input type="hidden" name="to" value="<?= esc($to) ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
     </td>
   </tr><?php endforeach; ?></tbody>
 </table>
 </div>
 <div class="modal fade" id="financialModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/financial/store') ?>" id="financialForm"><div class="modal-header"><h5>Movimentação financeira</h5></div><div class="modal-body row g-2">
-<input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" id="f_id">
+<input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" id="f_id"><input type="hidden" name="tab" id="f_tab" value="<?= esc($tab) ?>"><input type="hidden" name="from" value="<?= esc($from) ?>"><input type="hidden" name="to" value="<?= esc($to) ?>">
 <div class="col-6"><label class="form-label">Tipo</label><select class="form-select" name="tipo" id="f_tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
 <div class="col-6"><label class="form-label">Categoria</label><input class="form-control" name="categoria" id="f_categoria" required></div>
 <div class="col-12"><label class="form-label">Descrição</label><input class="form-control" name="descricao" id="f_descricao" required></div>
