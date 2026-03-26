@@ -85,17 +85,28 @@ class RentalController extends Controller
 
         $this->saveChecklist($rentalId, 'entrega');
 
-        (new FinancialEntry())->create([
-            'tipo' => 'receita',
-            'categoria' => 'locacao',
-            'descricao' => 'Receita prevista locação #' . $rentalId,
-            'valor' => $valorPrevisto,
-            'data_movimentacao' => $payload['data_inicio'],
-            'rental_id' => $rentalId,
-            'maintenance_id' => null,
-            'vehicle_id' => $vehicleId,
-            'client_id' => $payload['client_id'],
-        ]);
+        $financialEntry = new FinancialEntry();
+        if ($tipo === 'semanal') {
+            $financialEntry->generateWeeklyRentalChargesByRental(
+                [
+                    ...$payload,
+                    'id' => $rentalId,
+                ],
+                true
+            );
+        } else {
+            $financialEntry->create([
+                'tipo' => 'receita',
+                'categoria' => 'locacao',
+                'descricao' => 'Receita prevista locação #' . $rentalId,
+                'valor' => $valorPrevisto,
+                'data_movimentacao' => $payload['data_inicio'],
+                'rental_id' => $rentalId,
+                'maintenance_id' => null,
+                'vehicle_id' => $vehicleId,
+                'client_id' => $payload['client_id'],
+            ]);
+        }
 
         flash('success', 'Locação criada com sucesso.');
         $this->redirect('/rentals');
@@ -110,6 +121,10 @@ class RentalController extends Controller
 
         if (!$rental) {
             flash('error', 'Locação não encontrada.');
+            $this->redirect('/rentals');
+        }
+        if (($rental['status'] ?? '') !== 'ativa') {
+            flash('error', 'Somente locações ativas podem ser devolvidas.');
             $this->redirect('/rentals');
         }
 
@@ -127,7 +142,9 @@ class RentalController extends Controller
         $statusVeiculo = $_POST['retornar_para_manutencao'] === '1' ? 'manutencao' : 'disponivel';
         $vehicleModel = new Vehicle();
         $vehicleBefore = $vehicleModel->find((int)$rental['vehicle_id']);
-        $vehicleModel->setStatus((int)$rental['vehicle_id'], $statusVeiculo);
+        if ($statusVeiculo === 'manutencao' || !$rentalModel->hasActiveByVehicle((int)$rental['vehicle_id'], $rentalId)) {
+            $vehicleModel->setStatus((int)$rental['vehicle_id'], $statusVeiculo);
+        }
 
         if ($vehicleBefore && (int)$vehicleBefore['quilometragem_atual'] !== $kmRetorno) {
             (new MileageHistory())->create((int)$rental['vehicle_id'], (int)$vehicleBefore['quilometragem_atual'], $kmRetorno, 'devolucao');
@@ -147,12 +164,16 @@ class RentalController extends Controller
         $rentalModel = new Rental();
         $rental = $rentalModel->find($id);
 
-        if ($rental) {
+        if ($rental && ($rental['status'] ?? '') === 'ativa') {
             $rentalModel->cancel($id);
-            (new Vehicle())->setStatus((int)$rental['vehicle_id'], 'disponivel');
+            if (!$rentalModel->hasActiveByVehicle((int)$rental['vehicle_id'], $id)) {
+                (new Vehicle())->setStatus((int)$rental['vehicle_id'], 'disponivel');
+            }
+            flash('success', 'Locação cancelada.');
+            $this->redirect('/rentals');
         }
 
-        flash('success', 'Locação cancelada.');
+        flash('error', 'Locação inválida para cancelamento.');
         $this->redirect('/rentals');
     }
 

@@ -22,13 +22,18 @@
 <div class="col-md-4"><strong>Tempo contrato:</strong> <span id="view_tempo"></span></div>
 <div class="col-md-4"><strong>Início:</strong> <span id="view_inicio"></span></div>
 <div class="col-md-4"><strong>Fim previsto:</strong> <span id="view_fim"></span></div>
+<div class="col-md-4"><strong>Fim real:</strong> <span id="view_fim_real"></span></div>
 <div class="col-md-4"><strong>KM saída:</strong> <span id="view_km_saida"></span></div>
+<div class="col-md-4"><strong>KM retorno:</strong> <span id="view_km_retorno"></span></div>
 <div class="col-md-6"><strong>Valor previsto:</strong> <span id="view_valor"></span></div>
 <div class="col-md-6"><strong>Caução:</strong> <span id="view_caucao"></span></div>
+<div class="col-md-4"><strong>Financeiro total:</strong> <span id="view_fin_total"></span></div>
+<div class="col-md-4"><strong>Financeiro pago:</strong> <span id="view_fin_pago"></span></div>
+<div class="col-md-4"><strong>Financeiro pendente:</strong> <span id="view_fin_pendente"></span></div>
 <div class="col-12"><strong>Observações:</strong> <span id="view_obs"></span></div>
 <div class="col-12 d-none" id="view_actions_wrap">
   <div class="border rounded p-2 d-flex gap-2">
-    <button type="button" class="btn btn-success btn-sm" id="view_devolver_btn" data-bs-toggle="modal" data-bs-target="#finalizeModal" data-bs-dismiss="modal">Devolver</button>
+    <button type="button" class="btn btn-success btn-sm" id="view_devolver_btn" data-bs-toggle="modal" data-bs-target="#finalizeModal" data-bs-dismiss="modal">Devolver antes do prazo</button>
     <form method="POST" action="<?= url('/rentals/cancel') ?>" class="d-inline" onsubmit="return confirm('Cancelar locação?')">
       <input type="hidden" name="_token" value="<?= csrfToken() ?>">
       <input type="hidden" name="id" id="view_cancel_id">

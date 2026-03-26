@@ -109,18 +109,16 @@ class FinancialEntry extends BaseModel
     public function generateRecurringEntries(): void
     {
         $today = new DateTimeImmutable('today');
+        $futureLimit = $today->add(new DateInterval('P6M'));
         $templates = $this->db->query("SELECT * FROM financial_entries WHERE recorrente = 1 AND recorrencia_ativa = 1 AND parent_entry_id IS NULL")->fetchAll();
 
         foreach ($templates as $template) {
             $start = new DateTimeImmutable($template['referencia_data'] ?: $template['data_movimentacao']);
             $interval = ($template['recorrencia_periodo'] ?? 'mensal') === 'semanal' ? new DateInterval('P1W') : new DateInterval('P1M');
-            $period = new DatePeriod($start->add($interval), $interval, $today->add($interval));
+            $period = new DatePeriod($start->add($interval), $interval, $futureLimit->add($interval));
 
             foreach ($period as $date) {
                 $dateString = $date->format('Y-m-d');
-                if ($dateString > $today->format('Y-m-d')) {
-                    continue;
-                }
                 if ($this->existsByParentAndDate((int)$template['id'], $dateString)) {
                     continue;
                 }
@@ -146,7 +144,6 @@ class FinancialEntry extends BaseModel
 
     public function generateWeeklyRentalCharges(): void
     {
-        $today = new DateTimeImmutable('today');
         $sql = "SELECT r.*, c.nome_completo as cliente_nome, v.nome as veiculo_nome
                 FROM rentals r
                 JOIN clients c ON c.id = r.client_id
@@ -155,34 +152,44 @@ class FinancialEntry extends BaseModel
         $rentals = $this->db->query($sql)->fetchAll();
 
         foreach ($rentals as $rental) {
-            $start = new DateTimeImmutable($rental['data_inicio']);
-            $period = new DatePeriod($start, new DateInterval('P1W'), $today->add(new DateInterval('P1W')));
-            foreach ($period as $date) {
-                $dateString = $date->format('Y-m-d');
-                if ($dateString > $today->format('Y-m-d')) {
-                    continue;
-                }
+            $this->generateWeeklyRentalChargesByRental($rental);
+        }
+    }
 
-                $stmt = $this->db->prepare("SELECT id FROM financial_entries WHERE rental_id = :rental_id AND categoria = 'locacao_semanal' AND data_movimentacao = :data_movimentacao LIMIT 1");
-                $stmt->execute([
-                    'rental_id' => $rental['id'],
-                    'data_movimentacao' => $dateString,
-                ]);
-                if ($stmt->fetch()) {
-                    continue;
-                }
+    public function generateWeeklyRentalChargesByRental(array $rental, bool $includeFuture = false): void
+    {
+        if (($rental['tipo_cobranca'] ?? '') !== 'semanal') {
+            return;
+        }
 
-                $insert = $this->db->prepare('INSERT INTO financial_entries (tipo, categoria, descricao, valor, data_movimentacao, rental_id, maintenance_id, vehicle_id, client_id, pagamento_status, recorrente, recorrencia_periodo, recorrencia_ativa, referencia_data, origem_automatica) VALUES (\'receita\',\'locacao_semanal\',:descricao,:valor,:data_movimentacao,:rental_id,NULL,:vehicle_id,:client_id,\'nao_pago\',0,NULL,0,:referencia_data,1)');
-                $insert->execute([
-                    'descricao' => 'Cobrança semanal locação #' . $rental['id'] . ' - ' . $rental['cliente_nome'],
-                    'valor' => $rental['valor_cobranca'],
-                    'data_movimentacao' => $dateString,
-                    'rental_id' => $rental['id'],
-                    'vehicle_id' => $rental['vehicle_id'],
-                    'client_id' => $rental['client_id'],
-                    'referencia_data' => $dateString,
-                ]);
+        $today = new DateTimeImmutable('today');
+        $limitDate = $includeFuture ? $today->add(new DateInterval('P6M')) : $today;
+        $startDate = new DateTimeImmutable((string)$rental['data_inicio']);
+        $endDate = $this->resolveRentalWeeklyEndDate($rental, $startDate);
+        if ($endDate < $startDate) {
+            return;
+        }
+
+        $firstDueDate = $this->resolveFirstWeeklyDueDate($startDate, (string)($rental['dia_semana_vencimento'] ?? ''));
+        $effectiveEnd = $endDate < $limitDate ? $endDate : $limitDate;
+        $period = new DatePeriod($firstDueDate, new DateInterval('P1W'), $effectiveEnd->add(new DateInterval('P1D')));
+
+        foreach ($period as $date) {
+            $dateString = $date->format('Y-m-d');
+            if ($this->existsWeeklyRentalCharge((int)$rental['id'], $dateString)) {
+                continue;
             }
+
+            $insert = $this->db->prepare("INSERT INTO financial_entries (tipo, categoria, descricao, valor, data_movimentacao, rental_id, maintenance_id, vehicle_id, client_id, pagamento_status, recorrente, recorrencia_periodo, recorrencia_ativa, referencia_data, origem_automatica) VALUES ('receita','locacao_semanal',:descricao,:valor,:data_movimentacao,:rental_id,NULL,:vehicle_id,:client_id,'nao_pago',0,NULL,0,:referencia_data,1)");
+            $insert->execute([
+                'descricao' => 'Cobrança semanal locação #' . $rental['id'],
+                'valor' => (float)$rental['valor_cobranca'],
+                'data_movimentacao' => $dateString,
+                'rental_id' => $rental['id'],
+                'vehicle_id' => $rental['vehicle_id'],
+                'client_id' => $rental['client_id'],
+                'referencia_data' => $dateString,
+            ]);
         }
     }
 
@@ -205,6 +212,46 @@ class FinancialEntry extends BaseModel
         ];
     }
 
+    public function report(?string $from = null, ?string $to = null): array
+    {
+        $entries = $this->all($from, $to, null);
+        $summary = [
+            'receitas' => 0.0,
+            'despesas' => 0.0,
+            'pendente_receber' => 0.0,
+            'pendente_pagar' => 0.0,
+            'pagas' => 0.0,
+            'nao_pagas' => 0.0,
+            'recorrencias_ativas' => 0,
+        ];
+
+        foreach ($entries as $entry) {
+            $value = (float)$entry['valor'];
+            if ($entry['tipo'] === 'receita') {
+                $summary['receitas'] += $value;
+                if (($entry['pagamento_status'] ?? 'nao_pago') === 'nao_pago') {
+                    $summary['pendente_receber'] += $value;
+                }
+            } else {
+                $summary['despesas'] += $value;
+                if (($entry['pagamento_status'] ?? 'nao_pago') === 'nao_pago') {
+                    $summary['pendente_pagar'] += $value;
+                }
+            }
+            if (($entry['pagamento_status'] ?? 'nao_pago') === 'pago') {
+                $summary['pagas'] += $value;
+            } else {
+                $summary['nao_pagas'] += $value;
+            }
+            if (!empty($entry['recorrente']) && empty($entry['parent_entry_id'])) {
+                $summary['recorrencias_ativas']++;
+            }
+        }
+
+        $summary['saldo'] = $summary['receitas'] - $summary['despesas'];
+        return ['entries' => $entries, 'summary' => $summary];
+    }
+
     private function existsByParentAndDate(int $parentId, string $date): bool
     {
         $stmt = $this->db->prepare('SELECT id FROM financial_entries WHERE parent_entry_id = :parent_entry_id AND data_movimentacao = :data_movimentacao LIMIT 1');
@@ -213,6 +260,49 @@ class FinancialEntry extends BaseModel
             'data_movimentacao' => $date,
         ]);
         return (bool)$stmt->fetch();
+    }
+
+    private function existsWeeklyRentalCharge(int $rentalId, string $date): bool
+    {
+        $stmt = $this->db->prepare("SELECT id FROM financial_entries WHERE rental_id = :rental_id AND categoria = 'locacao_semanal' AND data_movimentacao = :data_movimentacao LIMIT 1");
+        $stmt->execute([
+            'rental_id' => $rentalId,
+            'data_movimentacao' => $date,
+        ]);
+        return (bool)$stmt->fetch();
+    }
+
+    private function resolveFirstWeeklyDueDate(DateTimeImmutable $startDate, string $dayName): DateTimeImmutable
+    {
+        $weekMap = [
+            'domingo' => 0,
+            'segunda' => 1,
+            'terca' => 2,
+            'terça' => 2,
+            'quarta' => 3,
+            'quinta' => 4,
+            'sexta' => 5,
+            'sabado' => 6,
+            'sábado' => 6,
+        ];
+        $normalizedDay = strtolower(trim($dayName));
+        $dayNumber = $weekMap[$normalizedDay] ?? (int)$startDate->format('w');
+        $currentNumber = (int)$startDate->format('w');
+        $daysToAdd = ($dayNumber - $currentNumber + 7) % 7;
+        return $startDate->modify('+' . $daysToAdd . ' day');
+    }
+
+    private function resolveRentalWeeklyEndDate(array $rental, DateTimeImmutable $startDate): DateTimeImmutable
+    {
+        if (!empty($rental['data_real_termino'])) {
+            return new DateTimeImmutable((string)$rental['data_real_termino']);
+        }
+        if (!empty($rental['data_prevista_termino'])) {
+            return new DateTimeImmutable((string)$rental['data_prevista_termino']);
+        }
+
+        $weeks = max(1, (int)($rental['tempo_contrato'] ?? 1));
+        return $startDate->add(new DateInterval('P' . $weeks . 'W'))->modify('-1 day');
     }
 
     private function ensureExtraColumns(): void

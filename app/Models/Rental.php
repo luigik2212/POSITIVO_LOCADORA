@@ -8,11 +8,25 @@ class Rental extends BaseModel
 {
     public function all(array $filters = []): array
     {
-        $sql = 'SELECT r.*, c.nome_completo as cliente_nome, v.nome as veiculo_nome, v.placa
+        $sql = "SELECT r.*, c.nome_completo as cliente_nome, v.nome as veiculo_nome, v.placa,
+                    COALESCE(fin.total_lancamentos, 0) AS financeiro_total_lancamentos,
+                    COALESCE(fin.total_pago, 0) AS financeiro_total_pago,
+                    COALESCE(fin.total_pendente, 0) AS financeiro_total_pendente,
+                    COALESCE(fin.qtd_lancamentos, 0) AS financeiro_qtd_lancamentos
                 FROM rentals r
                 JOIN clients c ON c.id = r.client_id
                 JOIN vehicles v ON v.id = r.vehicle_id
-                WHERE 1=1';
+                LEFT JOIN (
+                    SELECT rental_id,
+                           SUM(valor) AS total_lancamentos,
+                           SUM(CASE WHEN pagamento_status='pago' THEN valor ELSE 0 END) AS total_pago,
+                           SUM(CASE WHEN pagamento_status='nao_pago' THEN valor ELSE 0 END) AS total_pendente,
+                           COUNT(*) AS qtd_lancamentos
+                    FROM financial_entries
+                    WHERE rental_id IS NOT NULL
+                    GROUP BY rental_id
+                ) fin ON fin.rental_id = r.id
+                WHERE 1=1";
         $params = [];
 
         if (!empty($filters['status'])) {
@@ -67,9 +81,41 @@ class Rental extends BaseModel
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM rentals WHERE id=:id');
+        $stmt = $this->db->prepare("SELECT r.*, c.nome_completo as cliente_nome, v.nome as veiculo_nome, v.placa,
+            COALESCE(fin.total_lancamentos, 0) AS financeiro_total_lancamentos,
+            COALESCE(fin.total_pago, 0) AS financeiro_total_pago,
+            COALESCE(fin.total_pendente, 0) AS financeiro_total_pendente,
+            COALESCE(fin.qtd_lancamentos, 0) AS financeiro_qtd_lancamentos
+            FROM rentals r
+            JOIN clients c ON c.id = r.client_id
+            JOIN vehicles v ON v.id = r.vehicle_id
+            LEFT JOIN (
+                SELECT rental_id,
+                       SUM(valor) AS total_lancamentos,
+                       SUM(CASE WHEN pagamento_status='pago' THEN valor ELSE 0 END) AS total_pago,
+                       SUM(CASE WHEN pagamento_status='nao_pago' THEN valor ELSE 0 END) AS total_pendente,
+                       COUNT(*) AS qtd_lancamentos
+                FROM financial_entries
+                WHERE rental_id IS NOT NULL
+                GROUP BY rental_id
+            ) fin ON fin.rental_id = r.id
+            WHERE r.id=:id");
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;
+    }
+
+    public function hasActiveByVehicle(int $vehicleId, ?int $excludeRentalId = null): bool
+    {
+        $sql = "SELECT id FROM rentals WHERE vehicle_id = :vehicle_id AND status = 'ativa'";
+        $params = ['vehicle_id' => $vehicleId];
+        if ($excludeRentalId !== null) {
+            $sql .= ' AND id <> :exclude_id';
+            $params['exclude_id'] = $excludeRentalId;
+        }
+
+        $stmt = $this->db->prepare($sql . ' LIMIT 1');
+        $stmt->execute($params);
+        return (bool)$stmt->fetch();
     }
 
     public function activeCount(): int

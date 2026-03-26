@@ -29,7 +29,10 @@
     <input type="date" name="to" class="form-control" value="<?= esc($to??'') ?>">
     <button class="btn btn-outline-primary">Filtrar</button>
   </form>
-  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal" onclick="openFinancialModal()">Nova movimentação</button>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="<?= url('/financial/report') ?>?from=<?= esc($from) ?>&to=<?= esc($to) ?>">Relatório financeiro</a>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal" onclick="openFinancialModal()">Nova movimentação</button>
+  </div>
 </div>
 
 <ul class="nav nav-tabs mb-3">
