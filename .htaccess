@@ -1,0 +1,24 @@
+Options -Indexes
+RewriteEngine On
+
+# Se o projeto estiver em subpasta, ajuste o RewriteBase conforme necessário.
+RewriteBase /
+
+# Compatibilidade: se acessarem /public, redireciona para a raiz.
+RewriteRule ^public/?$ / [R=302,L]
+RewriteRule ^public/(.*)$ /$1 [R=302,L]
+
+# Entrega arquivos e diretórios reais sem passar pelo roteador.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Compatibilidade com estrutura antiga em /public (assets/uploads legados).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Front controller na raiz (public_html/index.php).
+RewriteRule ^ index.php [QSA,L]

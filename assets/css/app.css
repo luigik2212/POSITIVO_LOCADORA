@@ -1,0 +1,7 @@
+body { background: #f5f7fb; }
+.sidebar { min-height: 100vh; background: linear-gradient(180deg, #1f3a93, #10244d); }
+.sidebar .nav-link { color: #dce6ff; border-radius: 8px; margin: 2px 0; }
+.sidebar .nav-link:hover { background: rgba(255,255,255,.15); color: #fff; }
+.card-kpi { border: none; box-shadow: 0 6px 15px rgba(0,0,0,.06); }
+.login-page { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #1f3a93, #4b6cb7); }
+.login-card { width: min(420px, 92vw); }

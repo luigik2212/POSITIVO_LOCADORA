@@ -189,7 +189,12 @@ class RentalController extends Controller
             $ext = pathinfo($original, PATHINFO_EXTENSION);
             $filename = uniqid('check_', true) . '.' . $ext;
             $relativePath = '/uploads/checklists/' . $filename;
-            $target = __DIR__ . '/../../public' . $relativePath;
+            $targetDirectory = rtrim(UPLOADS_PATH, '/') . '/checklists';
+            if (!is_dir($targetDirectory)) {
+                mkdir($targetDirectory, 0775, true);
+            }
+
+            $target = $targetDirectory . '/' . $filename;
             move_uploaded_file($tmpName, $target);
 
             $checklistModel->addAttachment([

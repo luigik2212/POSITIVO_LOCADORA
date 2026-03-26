@@ -9,7 +9,7 @@
   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal">Nova movimentação</button>
 </div>
 <table class="table table-striped"><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Veículo</th><th>Cliente</th></tr></thead><tbody><?php foreach($entries as $e): ?><tr><td><?= esc($e['data_movimentacao']) ?></td><td><?= esc($e['tipo']) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?></td><td>R$ <?= number_format($e['valor'],2,',','.') ?></td><td><?= esc($e['veiculo_nome']) ?></td><td><?= esc($e['cliente_nome']) ?></td></tr><?php endforeach; ?></tbody></table>
-<div class="modal fade" id="financialModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="/financial/store"><div class="modal-header"><h5>Movimentação financeira</h5></div><div class="modal-body row g-2">
+<div class="modal fade" id="financialModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/financial/store') ?>"><div class="modal-header"><h5>Movimentação financeira</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>">
 <div class="col-6"><label class="form-label">Tipo</label><select class="form-select" name="tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
 <div class="col-6"><label class="form-label">Categoria</label><input class="form-control" name="categoria" required></div>

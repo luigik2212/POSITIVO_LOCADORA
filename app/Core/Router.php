@@ -25,7 +25,13 @@ class Router
 
     public function dispatch(string $uri, string $method): void
     {
-        $path = parse_url($uri, PHP_URL_PATH);
+        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        $basePath = appBasePath();
+
+        if ($basePath !== '' && str_starts_with($path, $basePath)) {
+            $path = substr($path, strlen($basePath)) ?: '/';
+        }
+
         $route = $this->routes[$method][$path] ?? null;
 
         if (!$route) {
@@ -34,12 +40,12 @@ class Router
         }
 
         if ($route['auth'] && !isAuthenticated()) {
-            header('Location: /login');
+            header('Location: ' . url('/login'));
             exit;
         }
 
         if ($path === '/login' && isAuthenticated()) {
-            header('Location: /');
+            header('Location: ' . url('/'));
             exit;
         }
 
