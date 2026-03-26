@@ -64,7 +64,7 @@ class FinancialEntry extends BaseModel
         $stmt->execute(['id' => $id, 'status' => $status]);
     }
 
-    public function all(?string $from = null, ?string $to = null): array
+    public function all(?string $from = null, ?string $to = null, ?string $tipo = null): array
     {
         $sql = 'SELECT fe.*, v.nome as veiculo_nome, c.nome_completo as cliente_nome FROM financial_entries fe
                 LEFT JOIN vehicles v ON v.id = fe.vehicle_id
@@ -79,9 +79,30 @@ class FinancialEntry extends BaseModel
             $sql .= ' AND fe.data_movimentacao <= :to';
             $params['to'] = $to;
         }
+        if ($tipo) {
+            $sql .= ' AND fe.tipo = :tipo';
+            $params['tipo'] = $tipo;
+        }
         $sql .= ' ORDER BY fe.data_movimentacao DESC, fe.id DESC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+
+    public function upcomingDue(string $tipo, int $limit = 5): array
+    {
+        $stmt = $this->db->prepare("SELECT fe.*, v.nome AS veiculo_nome, c.nome_completo AS cliente_nome
+            FROM financial_entries fe
+            LEFT JOIN vehicles v ON v.id = fe.vehicle_id
+            LEFT JOIN clients c ON c.id = fe.client_id
+            WHERE fe.tipo = :tipo AND fe.pagamento_status = 'nao_pago' AND fe.data_movimentacao >= CURDATE()
+            ORDER BY fe.data_movimentacao ASC, fe.id ASC
+            LIMIT :lim");
+        $stmt->bindValue(':tipo', $tipo);
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
         return $stmt->fetchAll();
     }
 

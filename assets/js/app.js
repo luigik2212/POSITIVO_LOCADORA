@@ -5,6 +5,13 @@ function withBase(path) {
   return (BASE_PATH ? BASE_PATH : '') + normalized;
 }
 
+function formatDateBr(value) {
+  if (!value) return '-';
+  const dt = new Date(value + 'T00:00:00');
+  if (Number.isNaN(dt.getTime())) return value;
+  return dt.toLocaleDateString('pt-BR');
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
@@ -25,6 +32,29 @@ function openClientModal(client = null) {
     const el = document.getElementById('c_' + k);
     if (el) el.value = client?.[k] ?? '';
   });
+
+  const wrap = document.getElementById('clientDocumentsWrap');
+  const list = document.getElementById('clientDocumentsList');
+  if (wrap && list) {
+    list.innerHTML = '';
+    const docs = client?.documents || [];
+    if (docs.length) {
+      wrap.classList.remove('d-none');
+      docs.forEach((doc) => {
+        const item = document.createElement('a');
+        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        item.href = withBase(`/clients/document-download?client_id=${client.id}&document_id=${doc.id}`);
+        item.textContent = doc.nome_original;
+        const badge = document.createElement('small');
+        badge.className = 'text-muted';
+        badge.textContent = (doc.tamanho_bytes || 0) + ' bytes';
+        item.appendChild(badge);
+        list.appendChild(item);
+      });
+    } else {
+      wrap.classList.add('d-none');
+    }
+  }
 }
 
 function openFinancialModal(entry = null) {
@@ -61,6 +91,38 @@ function toggleRecurring() {
 function fillFinalize(rental) {
   const field = document.getElementById('finalize_id');
   if (field) field.value = rental.id;
+}
+
+function openRentalView(rental) {
+  const map = {
+    cliente: rental.cliente_nome,
+    veiculo: `${rental.veiculo_nome} (${rental.placa})`,
+    status: rental.status,
+    tipo: rental.tipo_cobranca,
+    tempo: rental.tempo_contrato,
+    inicio: formatDateBr(rental.data_inicio),
+    fim: formatDateBr(rental.data_prevista_termino),
+    km_saida: rental.quilometragem_saida,
+    valor: `R$ ${Number(rental.valor_total_previsto || 0).toFixed(2)}`,
+    caucao: `R$ ${Number(rental.caucao || 0).toFixed(2)}`,
+    obs: rental.observacoes || '-',
+  };
+
+  Object.entries(map).forEach(([key, value]) => {
+    const el = document.getElementById('view_' + key);
+    if (el) el.textContent = value;
+  });
+
+  const actionsWrap = document.getElementById('view_actions_wrap');
+  const cancelId = document.getElementById('view_cancel_id');
+  const devolverBtn = document.getElementById('view_devolver_btn');
+  if (cancelId) cancelId.value = rental.id;
+  if (devolverBtn) {
+    devolverBtn.onclick = () => fillFinalize(rental);
+  }
+  if (actionsWrap) {
+    actionsWrap.classList.toggle('d-none', rental.status !== 'ativa');
+  }
 }
 
 function updatePricePreview() {

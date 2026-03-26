@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Models\Maintenance;
-use App\Models\Vehicle;
 use App\Models\FinancialEntry;
+use App\Models\Maintenance;
+use App\Models\MileageHistory;
+use App\Models\Vehicle;
 
 class MaintenanceController extends Controller
 {
@@ -41,6 +42,17 @@ class MaintenanceController extends Controller
         $maintenanceModel->create($data);
 
         $vehicleModel = new Vehicle();
+        $vehicle = $vehicleModel->find($data['vehicle_id']);
+        if ($vehicle && (int)$vehicle['quilometragem_atual'] !== $data['quilometragem_manutencao']) {
+            $vehicleModel->updateMileage($data['vehicle_id'], $data['quilometragem_manutencao']);
+            (new MileageHistory())->create(
+                $data['vehicle_id'],
+                (int)$vehicle['quilometragem_atual'],
+                $data['quilometragem_manutencao'],
+                'manutencao'
+            );
+        }
+
         if ($data['status'] === 'pendente') {
             $vehicleModel->setStatus($data['vehicle_id'], 'manutencao');
         }

@@ -110,6 +110,28 @@ CREATE TABLE checklist_attachments (
   FOREIGN KEY (checklist_id) REFERENCES checklists(id)
 );
 
+
+CREATE TABLE vehicle_mileage_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT NOT NULL,
+  km_anterior INT NOT NULL,
+  km_novo INT NOT NULL,
+  origem_atualizacao ENUM('manutencao','devolucao','edicao_manual') NOT NULL,
+  data_atualizacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+
+CREATE TABLE client_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  client_id INT NOT NULL,
+  nome_original VARCHAR(255) NOT NULL,
+  caminho_arquivo VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(120) DEFAULT NULL,
+  tamanho_bytes INT DEFAULT NULL,
+  data_upload DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
 CREATE TABLE financial_entries (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tipo ENUM('receita','despesa') NOT NULL,

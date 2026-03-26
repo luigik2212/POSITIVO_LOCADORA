@@ -5,18 +5,21 @@
     <div class="col-md-3"><select name="status" class="form-select"><option value="">Status</option><?php foreach (['disponivel','alugado','manutencao','inativo'] as $s): ?><option value="<?= $s ?>" <?= (($_GET['status'] ?? '')===$s)?'selected':'' ?>><?= ucfirst($s) ?></option><?php endforeach; ?></select></div>
     <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filtrar</button></div>
   </form>
+  <a class="btn btn-outline-secondary me-2" href="<?= url('/vehicles/mileage-history') ?>">Histórico KM</a>
   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#vehicleModal" onclick="openVehicleModal()">Adicionar veículo</button>
 </div>
 <div class="table-responsive">
   <table class="table table-striped align-middle">
-    <thead><tr><th>ID</th><th>Nome</th><th>Placa</th><th>Status</th><th>KM</th><th>Diária</th><th class="text-end">Ações</th></tr></thead>
+    <thead><tr><th>Nome</th><th>Placa</th><th>Status</th><th>KM</th><th>Diária</th><th>Ações</th></tr></thead>
     <tbody>
 <?php foreach ($vehicles as $v): ?>
 <tr>
-  <td><?= $v['id'] ?></td><td><?= esc($v['nome']) ?></td><td><?= esc($v['placa']) ?></td><td><span class="badge bg-secondary"><?= esc($v['status']) ?></span></td><td><?= (int)$v['quilometragem_atual'] ?></td><td>R$ <?= number_format($v['valor_diaria'],2,',','.') ?></td>
-  <td class="text-end">
-    <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#vehicleModal" onclick='openVehicleModal(<?= json_encode($v, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Editar</button>
-    <form method="POST" action="<?= url('/vehicles/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir veículo?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $v['id'] ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
+  <td><?= esc($v['nome']) ?></td><td><?= esc($v['placa']) ?></td><td><span class="badge bg-secondary"><?= esc($v['status']) ?></span></td><td><?= (int)$v['quilometragem_atual'] ?></td><td>R$ <?= number_format($v['valor_diaria'],2,',','.') ?></td>
+  <td>
+    <div class="d-flex align-items-center gap-1 table-actions-cell">
+      <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#vehicleModal" onclick='openVehicleModal(<?= json_encode($v, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Editar</button>
+      <form method="POST" action="<?= url('/vehicles/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir veículo?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $v['id'] ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
+    </div>
   </td>
 </tr>
 <?php endforeach; ?>

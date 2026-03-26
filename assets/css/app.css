@@ -11,3 +11,5 @@ body { background: #f5f7fb; }
 .btn { border-radius: 8px; }
 .modal-header { border-bottom: 1px solid #eef1f6; }
 .modal-footer { border-top: 1px solid #eef1f6; }
+.table-actions-cell { min-width: 160px; }
+.financial-due-soon { border-left: 4px solid #dc3545; background: #fff5f5; }
