@@ -57,4 +57,29 @@ class Maintenance extends BaseModel
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    public function report(?int $vehicleId = null, ?string $from = null, ?string $to = null): array
+    {
+        $sql = 'SELECT m.*, v.nome as veiculo_nome, v.placa
+                FROM maintenances m
+                JOIN vehicles v ON v.id = m.vehicle_id
+                WHERE 1=1';
+        $params = [];
+        if ($vehicleId) {
+            $sql .= ' AND m.vehicle_id = :vehicle_id';
+            $params['vehicle_id'] = $vehicleId;
+        }
+        if ($from) {
+            $sql .= ' AND m.data_manutencao >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND m.data_manutencao <= :to';
+            $params['to'] = $to;
+        }
+        $sql .= ' ORDER BY m.data_manutencao DESC, m.id DESC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }

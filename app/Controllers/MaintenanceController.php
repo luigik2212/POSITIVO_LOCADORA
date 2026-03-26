@@ -91,4 +91,28 @@ class MaintenanceController extends Controller
         flash('success', 'Status de manutenção atualizado.');
         $this->redirect('/maintenances');
     }
+
+    public function report(): void
+    {
+        $maintenanceModel = new Maintenance();
+        $vehicleModel = new Vehicle();
+        $vehicleId = !empty($_GET['vehicle_id']) ? (int)$_GET['vehicle_id'] : null;
+        $from = $_GET['from'] ?? date('Y-m-01');
+        $to = $_GET['to'] ?? date('Y-m-t');
+        $rows = $maintenanceModel->report($vehicleId, $from, $to);
+
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $total += (float)$row['valor_gasto'];
+        }
+
+        $this->view('maintenances/report', [
+            'maintenances' => $rows,
+            'vehicles' => $vehicleModel->all(),
+            'vehicleId' => $vehicleId,
+            'from' => $from,
+            'to' => $to,
+            'total' => $total,
+        ]);
+    }
 }

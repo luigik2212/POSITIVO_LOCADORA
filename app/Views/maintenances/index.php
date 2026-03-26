@@ -1,7 +1,10 @@
 <?php require __DIR__ . '/../partials/header.php'; ?>
 <div class="d-flex justify-content-between mb-3">
 <form method="GET" class="d-flex gap-2"><select name="vehicle_id" class="form-select"><option value="">Todos veículos</option><?php foreach($vehicles as $v): ?><option value="<?= $v['id'] ?>" <?= (($_GET['vehicle_id']??'')==$v['id'])?'selected':'' ?>><?= esc($v['nome']) ?> - <?= esc($v['placa']) ?></option><?php endforeach; ?></select><button class="btn btn-outline-primary">Filtrar</button></form>
-<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#maintenanceModal">Nova manutenção</button>
+<div class="d-flex gap-2">
+  <a class="btn btn-outline-secondary" href="<?= url('/maintenances/report') ?>?vehicle_id=<?= esc($_GET['vehicle_id'] ?? '') ?>">Relatório</a>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#maintenanceModal">Nova manutenção</button>
+</div>
 </div>
 <table class="table table-striped"><thead><tr><th>Veículo</th><th>Tipo</th><th>Data</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody><?php foreach($maintenances as $m): ?><tr><td><?= esc($m['veiculo_nome']) ?></td><td><?= esc($m['tipo_manutencao']) ?></td><td><?= esc($m['data_manutencao']) ?></td><td>R$ <?= number_format($m['valor_gasto'],2,',','.') ?></td><td><?= esc($m['status']) ?></td><td><?php if($m['status']==='pendente'): ?><form method="POST" action="<?= url('/maintenances/update-status') ?>" class="d-inline"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $m['id'] ?>"><input type="hidden" name="status" value="concluida"><button class="btn btn-sm btn-success">Concluir</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table>
 <div class="card"><div class="card-header">Total gasto por veículo</div><ul class="list-group list-group-flush"><?php foreach($totals as $t): ?><li class="list-group-item"><?= esc($t['nome']) ?> (<?= esc($t['placa']) ?>): R$ <?= number_format($t['total_gasto'],2,',','.') ?></li><?php endforeach; ?></ul></div>

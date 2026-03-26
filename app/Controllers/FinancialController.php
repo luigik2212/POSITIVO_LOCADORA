@@ -72,6 +72,24 @@ class FinancialController extends Controller
         $this->redirect('/financial');
     }
 
+    public function report(): void
+    {
+        $financial = new FinancialEntry();
+        $financial->generateWeeklyRentalCharges();
+        $financial->generateRecurringEntries();
+
+        $from = $_GET['from'] ?? date('Y-m-01');
+        $to = $_GET['to'] ?? date('Y-m-t');
+        $report = $financial->report($from, $to);
+
+        $this->view('financial/report', [
+            'entries' => $report['entries'],
+            'summary' => $report['summary'],
+            'from' => $from,
+            'to' => $to,
+        ]);
+    }
+
     private function payload(): array
     {
         $isRecurring = isset($_POST['recorrente']) && $_POST['recorrente'] === '1';

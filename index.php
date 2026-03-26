@@ -41,10 +41,12 @@ $router->post('/rentals/finalize', [RentalController::class, 'finalize'], true);
 $router->post('/rentals/cancel', [RentalController::class, 'cancel'], true);
 
 $router->get('/maintenances', [MaintenanceController::class, 'index'], true);
+$router->get('/maintenances/report', [MaintenanceController::class, 'report'], true);
 $router->post('/maintenances/store', [MaintenanceController::class, 'store'], true);
 $router->post('/maintenances/update-status', [MaintenanceController::class, 'updateStatus'], true);
 
 $router->get('/financial', [FinancialController::class, 'index'], true);
+$router->get('/financial/report', [FinancialController::class, 'report'], true);
 $router->post('/financial/store', [FinancialController::class, 'store'], true);
 $router->post('/financial/update', [FinancialController::class, 'update'], true);
 $router->post('/financial/delete', [FinancialController::class, 'delete'], true);

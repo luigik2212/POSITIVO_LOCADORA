@@ -91,6 +91,15 @@ function toggleRecurring() {
 function fillFinalize(rental) {
   const field = document.getElementById('finalize_id');
   if (field) field.value = rental.id;
+  const dateField = document.querySelector('#finalizeModal input[name="data_real_termino"]');
+  if (dateField) {
+    const today = new Date().toISOString().slice(0, 10);
+    dateField.value = today;
+  }
+  const kmField = document.querySelector('#finalizeModal input[name="quilometragem_retorno"]');
+  if (kmField) kmField.value = rental.quilometragem_retorno || rental.quilometragem_saida || '';
+  const finalValueField = document.querySelector('#finalizeModal input[name="valor_total_final"]');
+  if (finalValueField) finalValueField.value = rental.valor_total_final || rental.valor_total_previsto || '';
 }
 
 function openRentalView(rental) {
@@ -102,9 +111,14 @@ function openRentalView(rental) {
     tempo: rental.tempo_contrato,
     inicio: formatDateBr(rental.data_inicio),
     fim: formatDateBr(rental.data_prevista_termino),
+    fim_real: formatDateBr(rental.data_real_termino),
     km_saida: rental.quilometragem_saida,
+    km_retorno: rental.quilometragem_retorno || '-',
     valor: `R$ ${Number(rental.valor_total_previsto || 0).toFixed(2)}`,
     caucao: `R$ ${Number(rental.caucao || 0).toFixed(2)}`,
+    fin_total: `R$ ${Number(rental.financeiro_total_lancamentos || 0).toFixed(2)}`,
+    fin_pago: `R$ ${Number(rental.financeiro_total_pago || 0).toFixed(2)}`,
+    fin_pendente: `R$ ${Number(rental.financeiro_total_pendente || 0).toFixed(2)}`,
     obs: rental.observacoes || '-',
   };
 
