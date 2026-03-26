@@ -4,6 +4,10 @@ RewriteEngine On
 # Se o projeto estiver em subpasta, ajuste o RewriteBase conforme necessário.
 RewriteBase /
 
+# Compatibilidade: se acessarem /public, redireciona para a raiz.
+RewriteRule ^public/?$ / [R=302,L]
+RewriteRule ^public/(.*)$ /$1 [R=302,L]
+
 # Entrega arquivos e diretórios reais sem passar pelo roteador.
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
