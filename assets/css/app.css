@@ -2,87 +2,7 @@ body { background: #f5f7fb; }
 .sidebar { min-height: 100vh; background: linear-gradient(180deg, #1f3a93, #10244d); }
 .sidebar .nav-link { color: #dce6ff; border-radius: 8px; margin: 2px 0; padding: .55rem .75rem; }
 .sidebar .nav-link:hover { background: rgba(255,255,255,.15); color: #fff; }
-.card-kpi {
-  border: 1px solid #e9eef6;
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(15, 35, 95, .07);
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.card-kpi:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(15, 35, 95, .12);
-}
-.card-kpi .card-body { padding: 1.05rem 1.1rem; }
-.kpi-label {
-  font-size: .78rem;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: #5f6b80;
-  margin-bottom: .4rem;
-  font-weight: 700;
-}
-.kpi-value {
-  font-size: 1.95rem;
-  line-height: 1;
-  margin-bottom: .35rem;
-  color: #0f234f;
-  font-weight: 700;
-}
-.kpi-currency {
-  font-size: 1.45rem;
-  line-height: 1.1;
-  margin-bottom: .35rem;
-  color: #0f234f;
-  font-weight: 700;
-}
-.kpi-subtitle {
-  font-size: .82rem;
-  color: #7c889a;
-}
-.card-kpi-neutral { border-top: 3px solid #5f6b80; }
-.card-kpi-primary { border-top: 3px solid #1f3a93; }
-.card-kpi-success { border-top: 3px solid #1f8f5f; }
-.card-kpi-warning { border-top: 3px solid #d89126; }
-.card-kpi-finance-income {
-  border-top: 3px solid #1f8f5f;
-  background: linear-gradient(180deg, #fff 0%, #f4fcf8 100%);
-}
-.card-kpi-finance-expense {
-  border-top: 3px solid #dc3545;
-  background: linear-gradient(180deg, #fff 0%, #fff6f7 100%);
-}
-.card-kpi-finance-profit {
-  border-top: 3px solid #1f3a93;
-  background: linear-gradient(180deg, #fff 0%, #f5f8ff 100%);
-}
-.dashboard-section-title h5 {
-  font-weight: 700;
-  color: #1a2f67;
-}
-.dashboard-section-title p {
-  font-size: .92rem;
-}
-.dashboard-list-card .card-header {
-  background: #fff;
-  border-bottom: 1px solid #edf1f8;
-  font-weight: 700;
-  color: #233b73;
-}
-.dashboard-list-card .list-group-item {
-  border-bottom-color: #f0f3f9;
-  padding: .8rem 1rem;
-}
-.dashboard-list-card .list-group-item:last-child {
-  border-bottom: 0;
-}
-.dashboard-progress {
-  height: .5rem;
-  border-radius: 999px;
-  background: #e8edf7;
-}
-.dashboard-progress .progress-bar {
-  background: linear-gradient(90deg, #1f3a93, #4f78db);
-}
+.card-kpi { border: none; box-shadow: 0 6px 15px rgba(0,0,0,.06); }
 .login-page { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #1f3a93, #4b6cb7); }
 .login-card { width: min(420px, 92vw); }
 .table { border-radius: 10px; overflow: hidden; }
@@ -93,8 +13,3 @@ body { background: #f5f7fb; }
 .modal-footer { border-top: 1px solid #eef1f6; }
 .table-actions-cell { min-width: 160px; }
 .financial-due-soon { border-left: 4px solid #dc3545; background: #fff5f5; }
-
-@media (max-width: 991.98px) {
-  .kpi-value { font-size: 1.75rem; }
-  .kpi-currency { font-size: 1.25rem; }
-}
