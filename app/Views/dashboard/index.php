@@ -13,6 +13,6 @@
 <div class="row g-3">
   <div class="col-md-4"><div class="card"><div class="card-header">Últimas locações</div><ul class="list-group list-group-flush"><?php foreach ($latestRentals as $item): ?><li class="list-group-item"><?= esc($item['cliente_nome']) ?> - <?= esc($item['veiculo_nome']) ?> (<?= esc($item['status']) ?>)</li><?php endforeach; ?></ul></div></div>
   <div class="col-md-4"><div class="card"><div class="card-header">Manutenções pendentes</div><ul class="list-group list-group-flush"><?php foreach ($pendingMaintenances as $item): ?><li class="list-group-item"><?= esc($item['veiculo_nome']) ?> - <?= esc($item['tipo_manutencao']) ?></li><?php endforeach; ?></ul></div></div>
-  <div class="col-md-4"><div class="card"><div class="card-header">Próximos vencimentos</div><ul class="list-group list-group-flush"><?php foreach ($upcomingRentals as $item): ?><li class="list-group-item"><?= esc($item['cliente_nome']) ?> - <?= esc($item['data_prevista_termino']) ?></li><?php endforeach; ?></ul></div></div>
+  <div class="col-md-4"><div class="card"><div class="card-header">Próximos vencimentos</div><ul class="list-group list-group-flush"><?php foreach ($upcomingRentals as $item): ?><li class="list-group-item"><?= esc($item['cliente_nome']) ?> - <?= esc(date('d/m/Y', strtotime((string)$item['data_prevista_termino']))) ?></li><?php endforeach; ?></ul></div></div>
 </div>
 <?php require __DIR__ . '/../partials/footer.php'; ?>
