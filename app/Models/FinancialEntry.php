@@ -289,6 +289,9 @@ class FinancialEntry extends BaseModel
         $dayNumber = $weekMap[$normalizedDay] ?? (int)$startDate->format('w');
         $currentNumber = (int)$startDate->format('w');
         $daysToAdd = ($dayNumber - $currentNumber + 7) % 7;
+        if ($daysToAdd === 0) {
+            $daysToAdd = 7;
+        }
         return $startDate->modify('+' . $daysToAdd . ' day');
     }
 
