@@ -11,6 +11,7 @@ use App\Models\FinancialEntry;
 use App\Models\MileageHistory;
 use App\Models\Rental;
 use App\Models\Vehicle;
+use App\Services\RentalAlertService;
 
 class RentalController extends Controller
 {
@@ -174,6 +175,26 @@ class RentalController extends Controller
         }
 
         flash('error', 'Locação inválida para cancelamento.');
+        $this->redirect('/rentals');
+    }
+
+
+    public function sendDueAlert(): void
+    {
+        validateCsrf();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            flash('error', 'Locação inválida para envio de alerta.');
+            $this->redirect('/rentals');
+        }
+
+        $result = (new RentalAlertService())->sendManual($id);
+        if ($result['success']) {
+            flash('success', 'Alerta de vencimento enviado via WhatsApp com sucesso.');
+        } else {
+            flash('error', 'Falha ao enviar alerta WhatsApp: ' . ($result['error'] ?? 'erro desconhecido'));
+        }
+
         $this->redirect('/rentals');
     }
 

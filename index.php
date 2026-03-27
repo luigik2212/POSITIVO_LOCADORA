@@ -14,6 +14,7 @@ use App\Controllers\ClientController;
 use App\Controllers\RentalController;
 use App\Controllers\MaintenanceController;
 use App\Controllers\FinancialController;
+use App\Controllers\WhatsAppWebhookController;
 
 $router = new Router();
 
@@ -22,6 +23,10 @@ $router->post('/login', [AuthController::class, 'login']);
 $router->post('/logout', [AuthController::class, 'logout']);
 
 $router->get('/', [DashboardController::class, 'index'], true);
+
+
+$router->get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify']);
+$router->post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive']);
 
 $router->get('/vehicles', [VehicleController::class, 'index'], true);
 $router->post('/vehicles/store', [VehicleController::class, 'store'], true);
@@ -39,6 +44,7 @@ $router->get('/rentals', [RentalController::class, 'index'], true);
 $router->post('/rentals/store', [RentalController::class, 'store'], true);
 $router->post('/rentals/finalize', [RentalController::class, 'finalize'], true);
 $router->post('/rentals/cancel', [RentalController::class, 'cancel'], true);
+$router->post('/rentals/send-due-alert', [RentalController::class, 'sendDueAlert'], true);
 
 $router->get('/maintenances', [MaintenanceController::class, 'index'], true);
 $router->get('/maintenances/report', [MaintenanceController::class, 'report'], true);

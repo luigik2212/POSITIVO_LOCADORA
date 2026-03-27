@@ -132,6 +132,31 @@ CREATE TABLE client_documents (
   FOREIGN KEY (client_id) REFERENCES clients(id)
 );
 
+
+
+CREATE TABLE whatsapp_notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  rental_id INT NOT NULL,
+  client_id INT NOT NULL,
+  alert_type VARCHAR(50) NOT NULL,
+  phone VARCHAR(25) NOT NULL,
+  template_name VARCHAR(120) NOT NULL,
+  template_language VARCHAR(20) NOT NULL,
+  sent_at DATETIME NOT NULL,
+  message_id VARCHAR(120) DEFAULT NULL,
+  delivery_status VARCHAR(30) NOT NULL DEFAULT 'queued',
+  status_updated_at DATETIME DEFAULT NULL,
+  error_message TEXT,
+  payload_summary JSON DEFAULT NULL,
+  response_body JSON DEFAULT NULL,
+  data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_rental_alert_message (rental_id, alert_type, message_id),
+  KEY idx_whatsapp_rental_alert (rental_id, alert_type),
+  KEY idx_whatsapp_message_id (message_id),
+  CONSTRAINT fk_whatsapp_rental FOREIGN KEY (rental_id) REFERENCES rentals(id),
+  CONSTRAINT fk_whatsapp_client FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
 CREATE TABLE financial_entries (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tipo ENUM('receita','despesa') NOT NULL,
