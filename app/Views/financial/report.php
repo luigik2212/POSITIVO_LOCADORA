@@ -12,6 +12,7 @@
   <div class="col-md-4"><input type="date" name="to" class="form-control" value="<?= esc($to) ?>"></div>
   <div class="col-md-4"><button class="btn btn-outline-primary w-100">Atualizar relatório</button></div>
 </form>
+<small class="text-muted d-block mb-3">Período selecionado: <?= esc(date('d/m/Y', strtotime((string)$from))) ?> até <?= esc(date('d/m/Y', strtotime((string)$to))) ?></small>
 
 <div class="row g-2 mb-3">
   <div class="col-md-3"><div class="card"><div class="card-body"><small>Receitas</small><h5>R$ <?= number_format($summary['receitas'],2,',','.') ?></h5></div></div></div>

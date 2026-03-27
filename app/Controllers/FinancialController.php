@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\FinancialEntry;
+use App\Models\Vehicle;
 
 class FinancialController extends Controller
 {
@@ -21,6 +22,7 @@ class FinancialController extends Controller
         $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
 
         $entries = $financial->all($from, $to, $tipo, true);
+        $vehicles = (new Vehicle())->all();
         $totals = ['total' => 0.0, 'paid' => 0.0];
         foreach ($entries as $entry) {
             $value = (float)$entry['valor'];
@@ -30,7 +32,7 @@ class FinancialController extends Controller
             }
         }
 
-        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab'));
+        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'vehicles'));
     }
 
     public function store(): void

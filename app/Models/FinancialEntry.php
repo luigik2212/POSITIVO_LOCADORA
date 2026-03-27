@@ -66,7 +66,7 @@ class FinancialEntry extends BaseModel
 
     public function all(?string $from = null, ?string $to = null, ?string $tipo = null, bool $dueDateAscending = false): array
     {
-        $sql = 'SELECT fe.*, v.nome as veiculo_nome, c.nome_completo as cliente_nome FROM financial_entries fe
+        $sql = 'SELECT fe.*, v.nome as veiculo_nome, v.placa as veiculo_placa, c.nome_completo as cliente_nome FROM financial_entries fe
                 LEFT JOIN vehicles v ON v.id = fe.vehicle_id
                 LEFT JOIN clients c ON c.id = fe.client_id
                 WHERE 1=1';

@@ -61,7 +61,7 @@ function openFinancialModal(entry = null, currentTab = 'payable') {
   const form = document.getElementById('financialForm');
   if (!form) return;
   form.action = entry ? withBase('/financial/update') : withBase('/financial/store');
-  const fields = ['id','tipo','categoria','descricao','valor','data_movimentacao','vehicle_id','client_id','pagamento_status','recorrente','recorrencia_periodo'];
+  const fields = ['id','tipo','categoria','descricao','valor','data_movimentacao','client_id','pagamento_status','recorrente','recorrencia_periodo'];
 
   fields.forEach((k) => {
     const el = document.getElementById('f_' + k);
@@ -88,6 +88,14 @@ function openFinancialModal(entry = null, currentTab = 'payable') {
   if (!entry) {
     const status = document.getElementById('f_pagamento_status');
     if (status) status.value = 'nao_pago';
+  }
+
+  const vehicleIdField = document.getElementById('f_vehicle_id');
+  const vehicleSearchField = document.getElementById('f_vehicle_search');
+  if (vehicleIdField) vehicleIdField.value = entry?.vehicle_id ?? '';
+  if (vehicleSearchField) {
+    const vehicleLabel = [entry?.veiculo_nome, entry?.veiculo_placa ? `(${entry.veiculo_placa})` : ''].filter(Boolean).join(' ');
+    vehicleSearchField.value = vehicleLabel;
   }
 
   toggleRecurring();
@@ -166,6 +174,19 @@ function updatePricePreview() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const vehicleSearch = document.getElementById('f_vehicle_search');
+  const vehicleId = document.getElementById('f_vehicle_id');
+  const vehicleOptions = document.getElementById('f_vehicle_options');
+  if (vehicleSearch && vehicleId && vehicleOptions) {
+    const syncVehicleId = () => {
+      const normalized = vehicleSearch.value.trim().toLowerCase();
+      const match = Array.from(vehicleOptions.options).find((option) => option.value.trim().toLowerCase() === normalized);
+      vehicleId.value = match ? (match.dataset.id || '') : '';
+    };
+    vehicleSearch.addEventListener('input', syncVehicleId);
+    vehicleSearch.addEventListener('change', syncVehicleId);
+  }
+
   ['vehicleSelect', 'tipoCobranca', 'tempoContrato'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updatePricePreview);
