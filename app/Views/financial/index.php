@@ -30,9 +30,9 @@
 
 <div class="table-responsive">
 <table class="table table-striped align-middle">
-  <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><th>Cliente</th><th class="text-end">Ações</th></tr></thead>
+  <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><?php if ($tab === 'receivable'): ?><th>Cliente</th><?php endif; ?><th class="text-end">Ações</th></tr></thead>
   <tbody><?php foreach($entries as $e): ?><tr>
-    <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['tipo']) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
+    <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
     <td>R$ <?= number_format($e['valor'],2,',','.') ?></td>
     <td>
       <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center">
@@ -47,7 +47,8 @@
         </select>
       </form>
     </td>
-    <td><?= esc(trim(((string)($e['veiculo_nome'] ?? '')) . (!empty($e['veiculo_placa']) ? ' (' . $e['veiculo_placa'] . ')' : ''))) ?></td><td><?= esc($e['cliente_nome']) ?></td>
+    <td><?= esc(trim(((string)($e['veiculo_nome'] ?? '')) . (!empty($e['veiculo_placa']) ? ' (' . $e['veiculo_placa'] . ')' : ''))) ?></td>
+    <?php if ($tab === 'receivable'): ?><td><?= esc($e['cliente_nome']) ?></td><?php endif; ?>
     <td class="text-end">
       <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#financialModal" onclick='openFinancialModal(<?= json_encode($e, JSON_HEX_APOS|JSON_HEX_QUOT) ?>, "<?= esc($tab) ?>")'>Editar</button>
       <form method="POST" action="<?= url('/financial/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir movimentação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $e['id'] ?>"><input type="hidden" name="tab" value="<?= esc($tab) ?>"><input type="hidden" name="from" value="<?= esc($from) ?>"><input type="hidden" name="to" value="<?= esc($to) ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
@@ -77,4 +78,13 @@
 </div>
 <div class="col-6"><label class="form-label">ID cliente (opcional)</label><input class="form-control" name="client_id" id="f_client_id"></div>
 </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button class="btn btn-primary">Salvar</button></div></form></div></div></div>
+<script>
+  window.financialVehicles = <?= json_encode(array_map(static function (array $vehicle): array {
+      return [
+          'id' => (int)($vehicle['id'] ?? 0),
+          'nome' => (string)($vehicle['nome'] ?? ''),
+          'placa' => (string)($vehicle['placa'] ?? ''),
+      ];
+  }, $vehicles), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+</script>
 <?php require __DIR__ . '/../partials/footer.php'; ?>

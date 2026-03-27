@@ -176,15 +176,42 @@ function updatePricePreview() {
 document.addEventListener('DOMContentLoaded', () => {
   const vehicleSearch = document.getElementById('f_vehicle_search');
   const vehicleId = document.getElementById('f_vehicle_id');
-  const vehicleOptions = document.getElementById('f_vehicle_options');
-  if (vehicleSearch && vehicleId && vehicleOptions) {
+  if (vehicleSearch && vehicleId) {
+    const vehicles = Array.isArray(window.financialVehicles) ? window.financialVehicles : [];
+    const normalize = (value) => String(value || '').trim().toLowerCase();
+    const buildVehicleLabel = (vehicle) => `${vehicle.nome || ''} (${vehicle.placa || ''})`.trim();
+
     const syncVehicleId = () => {
-      const normalized = vehicleSearch.value.trim().toLowerCase();
-      const match = Array.from(vehicleOptions.options).find((option) => option.value.trim().toLowerCase() === normalized);
-      vehicleId.value = match ? (match.dataset.id || '') : '';
+      const normalized = normalize(vehicleSearch.value);
+      if (!normalized) {
+        vehicleId.value = '';
+        return;
+      }
+
+      const match = vehicles.find((vehicle) => {
+        const byLabel = normalize(buildVehicleLabel(vehicle)) === normalized;
+        const byName = normalize(vehicle.nome) === normalized;
+        const byPlate = normalize(vehicle.placa) === normalized;
+        return byLabel || byName || byPlate;
+      });
+
+      vehicleId.value = match ? String(match.id || '') : '';
     };
+
     vehicleSearch.addEventListener('input', syncVehicleId);
     vehicleSearch.addEventListener('change', syncVehicleId);
+
+    const financialForm = document.getElementById('financialForm');
+    if (financialForm) {
+      financialForm.addEventListener('submit', (event) => {
+        syncVehicleId();
+        if (vehicleSearch.value.trim() && !vehicleId.value) {
+          event.preventDefault();
+          window.alert('Selecione um veículo válido na lista para salvar a despesa.');
+          vehicleSearch.focus();
+        }
+      });
+    }
   }
 
   ['vehicleSelect', 'tipoCobranca', 'tempoContrato'].forEach(id => {
