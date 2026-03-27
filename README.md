@@ -75,3 +75,54 @@ Em produção, mantenha `APP_DEBUG=0`.
 - Rotas amigáveis via `.htaccess` na raiz.
 - Assets e uploads servidos pela raiz (`/assets`, `/uploads`).
 - Se existir estrutura antiga em `/public`, o `.htaccess` mantém fallback automático.
+
+## 6) Integração oficial WhatsApp Cloud API (Meta)
+
+### Variáveis de ambiente
+Adicione no `.env` (backend):
+
+```dotenv
+WHATSAPP_ACCESS_TOKEN=EAAG...
+WHATSAPP_PHONE_NUMBER_ID=1234567890
+WHATSAPP_BUSINESS_ACCOUNT_ID=1234567890
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=token_forte_unico
+WHATSAPP_TEMPLATE_NAME=lembrete_vencimento_locacao
+WHATSAPP_TEMPLATE_LANGUAGE=pt_BR
+```
+
+> Nunca exponha token no front-end. A integração usa apenas backend PHP.
+
+### Template esperada
+A implementação envia **template message** com 4 variáveis no body, nesta ordem:
+1. Nome do cliente
+2. Nome do veículo
+3. Placa
+4. Data de vencimento (dd/mm/aaaa)
+
+### Webhook oficial da Meta
+- URL de verificação/callback: `https://seu-dominio.com/webhooks/whatsapp`
+- Método GET: validação (`hub.challenge`)
+- Método POST: recebimento de status (`sent`, `delivered`, `read`, `failed`)
+- O `WHATSAPP_WEBHOOK_VERIFY_TOKEN` deve bater com o token configurado no app Meta.
+
+### Rotina automática (7 dias antes)
+Script pronto para cron diário:
+
+```bash
+php /caminho/do/projeto/scripts/send_due_alerts.php
+```
+
+Exemplo de cron (todo dia 08:00):
+
+```cron
+0 8 * * * /usr/bin/php /home/usuario/public_html/scripts/send_due_alerts.php >> /home/usuario/public_html/storage/logs/cron.log 2>&1
+```
+
+### Logs
+- Arquivo de diagnóstico: `storage/logs/whatsapp.log`
+- Registra: payload resumido, HTTP code, resposta da API, telefone inválido e falhas de configuração.
+
+### Controle de duplicidade
+- Tabela: `whatsapp_notifications`
+- O disparo automático ignora locações que já tiveram alerta `due_in_7_days` com status de sucesso/fila.
+- Reenvio manual continua disponível na tela de locações.

@@ -8,7 +8,16 @@ class Rental extends BaseModel
 {
     public function all(array $filters = []): array
     {
-        $sql = "SELECT r.*, c.nome_completo as cliente_nome, v.nome as veiculo_nome, v.placa,
+        $sql = "SELECT r.*, c.nome_completo as cliente_nome, c.telefone as cliente_telefone, v.nome as veiculo_nome, v.placa,
+                    CASE
+                        WHEN r.data_prevista_termino < CURDATE() THEN 'vencido'
+                        WHEN r.data_prevista_termino = CURDATE() THEN 'vence_hoje'
+                        WHEN DATEDIFF(r.data_prevista_termino, CURDATE()) = 7 THEN 'vence_em_7_dias'
+                        ELSE 'ok'
+                    END AS alerta_status,
+                    COALESCE(wn.delivery_status, 'nao_enviado') AS whatsapp_delivery_status,
+                    wn.sent_at AS whatsapp_sent_at,
+                    wn.phone AS whatsapp_phone,
                     COALESCE(fin.total_lancamentos, 0) AS financeiro_total_lancamentos,
                     COALESCE(fin.total_pago, 0) AS financeiro_total_pago,
                     COALESCE(fin.total_pendente, 0) AS financeiro_total_pendente,
@@ -16,6 +25,16 @@ class Rental extends BaseModel
                 FROM rentals r
                 JOIN clients c ON c.id = r.client_id
                 JOIN vehicles v ON v.id = r.vehicle_id
+                LEFT JOIN (
+                    SELECT n1.*
+                    FROM whatsapp_notifications n1
+                    INNER JOIN (
+                        SELECT rental_id, MAX(id) AS max_id
+                        FROM whatsapp_notifications
+                        WHERE alert_type = 'due_in_7_days'
+                        GROUP BY rental_id
+                    ) n2 ON n2.max_id = n1.id
+                ) wn ON wn.rental_id = r.id
                 LEFT JOIN (
                     SELECT rental_id,
                            SUM(valor) AS total_lancamentos,
@@ -81,7 +100,7 @@ class Rental extends BaseModel
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->prepare("SELECT r.*, c.nome_completo as cliente_nome, v.nome as veiculo_nome, v.placa,
+        $stmt = $this->db->prepare("SELECT r.*, c.nome_completo as cliente_nome, c.telefone as cliente_telefone, v.nome as veiculo_nome, v.placa,
             COALESCE(fin.total_lancamentos, 0) AS financeiro_total_lancamentos,
             COALESCE(fin.total_pago, 0) AS financeiro_total_pago,
             COALESCE(fin.total_pendente, 0) AS financeiro_total_pendente,
@@ -102,6 +121,57 @@ class Rental extends BaseModel
             WHERE r.id=:id");
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;
+    }
+
+    public function listDueInDaysWithoutNotification(int $days): array
+    {
+        $stmt = $this->db->prepare("SELECT r.*, c.nome_completo as cliente_nome, c.telefone as cliente_telefone, v.nome as veiculo_nome, v.placa
+            FROM rentals r
+            JOIN clients c ON c.id = r.client_id
+            JOIN vehicles v ON v.id = r.vehicle_id
+            LEFT JOIN whatsapp_notifications wn
+                ON wn.rental_id = r.id
+                AND wn.alert_type = 'due_in_7_days'
+                AND wn.delivery_status IN ('queued','sent','delivered','read')
+            WHERE r.status = 'ativa'
+              AND r.data_prevista_termino = DATE_ADD(CURDATE(), INTERVAL :days DAY)
+              AND wn.id IS NULL");
+        $stmt->bindValue(':days', $days, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function dueAlertsForDashboard(int $limit = 10): array
+    {
+        $stmt = $this->db->prepare("SELECT r.id, c.nome_completo as cliente_nome, v.nome as veiculo_nome, v.placa,
+            r.data_prevista_termino,
+            CASE
+                WHEN r.data_prevista_termino < CURDATE() THEN 'vencido'
+                WHEN r.data_prevista_termino = CURDATE() THEN 'vence_hoje'
+                WHEN DATEDIFF(r.data_prevista_termino, CURDATE()) = 7 THEN 'vence_em_7_dias'
+                ELSE 'ok'
+            END AS alerta_status,
+            COALESCE(wn.delivery_status, 'nao_enviado') AS whatsapp_delivery_status
+            FROM rentals r
+            JOIN clients c ON c.id = r.client_id
+            JOIN vehicles v ON v.id = r.vehicle_id
+            LEFT JOIN (
+                SELECT n1.*
+                FROM whatsapp_notifications n1
+                INNER JOIN (
+                    SELECT rental_id, MAX(id) AS max_id
+                    FROM whatsapp_notifications
+                    WHERE alert_type = 'due_in_7_days'
+                    GROUP BY rental_id
+                ) n2 ON n2.max_id = n1.id
+            ) wn ON wn.rental_id = r.id
+            WHERE r.status='ativa'
+              AND (r.data_prevista_termino <= CURDATE() OR DATEDIFF(r.data_prevista_termino, CURDATE()) = 7)
+            ORDER BY r.data_prevista_termino ASC
+            LIMIT :lim");
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 
     public function hasActiveByVehicle(int $vehicleId, ?int $excludeRentalId = null): bool

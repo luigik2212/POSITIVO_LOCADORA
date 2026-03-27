@@ -29,6 +29,7 @@ class DashboardController extends Controller
             'latestRentals' => $rentalModel->latest(),
             'pendingMaintenances' => $maintenanceModel->pending(),
             'upcomingRentals' => $rentalModel->upcoming(),
+            'dueAlerts' => $rentalModel->dueAlertsForDashboard(),
         ]);
     }
 }

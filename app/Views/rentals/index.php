@@ -1,4 +1,15 @@
 <?php require __DIR__ . '/../partials/header.php'; ?>
+
+<?php
+$alertLabel = static function (string $status): string {
+  return match ($status) {
+    'vence_em_7_dias' => 'Vence em 7 dias',
+    'vence_hoje' => 'Vence hoje',
+    'vencido' => 'Vencido',
+    default => 'Sem alerta',
+  };
+};
+?>
 <div class="d-flex justify-content-between mb-3">
 <form method="GET" class="row g-2">
   <div class="col"><select name="status" class="form-select"><option value="">Todos os status</option><?php foreach(['ativa','finalizada','cancelada'] as $s): ?><option value="<?= $s ?>" <?= (($filters['status']??'')===$s)?'selected':'' ?>><?= ucfirst($s) ?></option><?php endforeach; ?></select></div>
@@ -9,9 +20,16 @@
 </form>
 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rentalModal">Nova locação</button>
 </div>
-<table class="table table-striped"><thead><tr><th>Cliente</th><th>Veículo</th><th>Tipo</th><th>Início</th><th>Fim</th><th>Previsto</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-<?php foreach($rentals as $r): ?><tr><td><?= esc($r['cliente_nome']) ?></td><td><?= esc($r['veiculo_nome']) ?> (<?= esc($r['placa']) ?>)</td><td><?= esc($r['tipo_cobranca']) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$r['data_inicio']))) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$r['data_prevista_termino']))) ?></td><td>R$ <?= number_format($r['valor_total_previsto'],2,',','.') ?></td><td><?= esc($r['status']) ?></td><td>
+<table class="table table-striped"><thead><tr><th>Cliente</th><th>Veículo</th><th>Tipo</th><th>Início</th><th>Fim</th><th>Previsto</th><th>Alerta</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+<?php foreach($rentals as $r): ?><tr><td><?= esc($r['cliente_nome']) ?></td><td><?= esc($r['veiculo_nome']) ?> (<?= esc($r['placa']) ?>)</td><td><?= esc($r['tipo_cobranca']) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$r['data_inicio']))) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$r['data_prevista_termino']))) ?></td><td>R$ <?= number_format($r['valor_total_previsto'],2,',','.') ?></td><td><?= esc($alertLabel((string)($r['alerta_status'] ?? 'ok'))) ?></td><td><?= esc((string)($r['whatsapp_delivery_status'] ?? 'nao_enviado')) ?></td><td><?= esc($r['status']) ?></td><td>
 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewRentalModal" onclick='openRentalView(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)' title="Visualizar">👁️</button>
+<?php if (($r['status'] ?? '') === 'ativa' && !empty($r['cliente_telefone'])): ?>
+<form method="POST" action="<?= url('/rentals/send-due-alert') ?>" class="d-inline" onsubmit="return confirm('Reenviar alerta WhatsApp para esta locação?')">
+  <input type="hidden" name="_token" value="<?= csrfToken() ?>">
+  <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+  <button class="btn btn-sm btn-outline-success" title="Reenviar alerta WhatsApp">WhatsApp</button>
+</form>
+<?php endif; ?>
 </td></tr><?php endforeach; ?></tbody></table>
 
 <div class="modal fade" id="viewRentalModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5>Detalhes da locação</h5></div><div class="modal-body row g-2">
