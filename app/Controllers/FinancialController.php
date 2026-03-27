@@ -20,7 +20,7 @@ class FinancialController extends Controller
         $tab = ($_GET['tab'] ?? 'payable') === 'receivable' ? 'receivable' : 'payable';
         $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
 
-        $entries = $financial->all($from, $to, $tipo);
+        $entries = $financial->all($from, $to, $tipo, true);
         $totals = ['total' => 0.0, 'paid' => 0.0];
         foreach ($entries as $entry) {
             $value = (float)$entry['valor'];

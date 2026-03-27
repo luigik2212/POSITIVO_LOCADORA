@@ -64,7 +64,7 @@ class FinancialEntry extends BaseModel
         $stmt->execute(['id' => $id, 'status' => $status]);
     }
 
-    public function all(?string $from = null, ?string $to = null, ?string $tipo = null): array
+    public function all(?string $from = null, ?string $to = null, ?string $tipo = null, bool $dueDateAscending = false): array
     {
         $sql = 'SELECT fe.*, v.nome as veiculo_nome, c.nome_completo as cliente_nome FROM financial_entries fe
                 LEFT JOIN vehicles v ON v.id = fe.vehicle_id
@@ -83,7 +83,11 @@ class FinancialEntry extends BaseModel
             $sql .= ' AND fe.tipo = :tipo';
             $params['tipo'] = $tipo;
         }
-        $sql .= ' ORDER BY fe.data_movimentacao DESC, fe.id DESC';
+        if ($dueDateAscending) {
+            $sql .= ' ORDER BY fe.data_movimentacao ASC, fe.id ASC';
+        } else {
+            $sql .= ' ORDER BY fe.data_movimentacao DESC, fe.id DESC';
+        }
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
