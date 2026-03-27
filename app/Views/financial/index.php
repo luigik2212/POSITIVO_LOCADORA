@@ -21,6 +21,7 @@
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#financialModal" onclick="openFinancialModal(null, '<?= esc($tab) ?>')">Nova movimentação</button>
   </div>
 </div>
+<small class="text-muted d-block mb-3">Período selecionado: <?= esc(date('d/m/Y', strtotime((string)$from))) ?> até <?= esc(date('d/m/Y', strtotime((string)$to))) ?></small>
 
 <ul class="nav nav-tabs mb-3">
   <li class="nav-item"><a class="nav-link <?= $tab === 'payable' ? 'active' : '' ?>" href="<?= url('/financial') ?>?tab=payable&from=<?= esc($from) ?>&to=<?= esc($to) ?>">Contas a pagar</a></li>
@@ -46,7 +47,7 @@
         </select>
       </form>
     </td>
-    <td><?= esc($e['veiculo_nome']) ?></td><td><?= esc($e['cliente_nome']) ?></td>
+    <td><?= esc(trim(((string)($e['veiculo_nome'] ?? '')) . (!empty($e['veiculo_placa']) ? ' (' . $e['veiculo_placa'] . ')' : ''))) ?></td><td><?= esc($e['cliente_nome']) ?></td>
     <td class="text-end">
       <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#financialModal" onclick='openFinancialModal(<?= json_encode($e, JSON_HEX_APOS|JSON_HEX_QUOT) ?>, "<?= esc($tab) ?>")'>Editar</button>
       <form method="POST" action="<?= url('/financial/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir movimentação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $e['id'] ?>"><input type="hidden" name="tab" value="<?= esc($tab) ?>"><input type="hidden" name="from" value="<?= esc($from) ?>"><input type="hidden" name="to" value="<?= esc($to) ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
@@ -60,11 +61,20 @@
 <div class="col-6"><label class="form-label">Categoria</label><input class="form-control" name="categoria" id="f_categoria" required></div>
 <div class="col-12"><label class="form-label">Descrição</label><input class="form-control" name="descricao" id="f_descricao" required></div>
 <div class="col-6"><label class="form-label">Valor</label><input type="number" step="0.01" class="form-control" name="valor" id="f_valor" required></div>
-<div class="col-6"><label class="form-label">Data</label><input type="date" class="form-control" name="data_movimentacao" id="f_data_movimentacao" required></div>
+<div class="col-6"><label class="form-label">Data</label><input type="date" class="form-control" name="data_movimentacao" id="f_data_movimentacao" required><small class="text-muted">Formato: dd/mm/aaaa</small></div>
 <div class="col-6"><label class="form-label">Status pagamento</label><select class="form-select" name="pagamento_status" id="f_pagamento_status"><option value="nao_pago">Não pago</option><option value="pago">Pago</option></select></div>
 <div class="col-6"><label class="form-label">Conta recorrente?</label><select class="form-select" name="recorrente" id="f_recorrente" onchange="toggleRecurring()"><option value="0">Não</option><option value="1">Sim</option></select></div>
 <div class="col-12 d-none" id="recorrencia_wrap"><label class="form-label">Periodicidade</label><select class="form-select" name="recorrencia_periodo" id="f_recorrencia_periodo"><option value="mensal">Mensal</option><option value="semanal">Semanal</option></select></div>
-<div class="col-6"><label class="form-label">ID veículo (opcional)</label><input class="form-control" name="vehicle_id" id="f_vehicle_id"></div>
+<div class="col-6">
+  <label class="form-label">Veículo (opcional)</label>
+  <input class="form-control" id="f_vehicle_search" list="f_vehicle_options" placeholder="Buscar por nome ou placa">
+  <datalist id="f_vehicle_options">
+    <?php foreach ($vehicles as $vehicle): ?>
+      <option value="<?= esc(($vehicle['nome'] ?? '') . ' (' . ($vehicle['placa'] ?? '') . ')') ?>" data-id="<?= (int)$vehicle['id'] ?>"></option>
+    <?php endforeach; ?>
+  </datalist>
+  <input type="hidden" name="vehicle_id" id="f_vehicle_id">
+</div>
 <div class="col-6"><label class="form-label">ID cliente (opcional)</label><input class="form-control" name="client_id" id="f_client_id"></div>
 </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button class="btn btn-primary">Salvar</button></div></form></div></div></div>
 <?php require __DIR__ . '/../partials/footer.php'; ?>
