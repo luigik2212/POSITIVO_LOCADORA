@@ -14,6 +14,7 @@ use App\Controllers\ClientController;
 use App\Controllers\RentalController;
 use App\Controllers\MaintenanceController;
 use App\Controllers\FinancialController;
+use App\Controllers\ReportController;
 
 $router = new Router();
 
@@ -45,6 +46,7 @@ $router->get('/maintenances/report', [MaintenanceController::class, 'report'], t
 $router->post('/maintenances/store', [MaintenanceController::class, 'store'], true);
 $router->post('/maintenances/update-status', [MaintenanceController::class, 'updateStatus'], true);
 
+$router->get('/reports', [ReportController::class, 'index'], true);
 $router->get('/financial', [FinancialController::class, 'index'], true);
 $router->get('/financial/report', [FinancialController::class, 'report'], true);
 $router->post('/financial/store', [FinancialController::class, 'store'], true);
