@@ -93,6 +93,7 @@ class FinancialEntry extends BaseModel
         return $stmt->fetchAll();
     }
 
+
     public function upcomingDue(string $tipo, int $limit = 5): array
     {
         $stmt = $this->db->prepare("SELECT fe.*, v.nome AS veiculo_nome, c.nome_completo AS cliente_nome
@@ -196,83 +197,6 @@ class FinancialEntry extends BaseModel
         }
     }
 
-    public function sumByVehicleAndType(int $vehicleId, string $type, ?string $from = null, ?string $to = null): float
-    {
-        $sql = 'SELECT SUM(valor) FROM financial_entries WHERE vehicle_id = :vehicle_id AND tipo = :tipo';
-        $params = [
-            'vehicle_id' => $vehicleId,
-            'tipo' => $type,
-        ];
-
-        if ($from) {
-            $sql .= ' AND data_movimentacao >= :from';
-            $params['from'] = $from;
-        }
-        if ($to) {
-            $sql .= ' AND data_movimentacao <= :to';
-            $params['to'] = $to;
-        }
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-
-        return (float)$stmt->fetchColumn();
-    }
-
-    public function summaryByPeriod(?int $month, int $year, string $periodType = 'month'): array
-    {
-        $sql = "SELECT
-            SUM(CASE WHEN tipo='receita' THEN valor ELSE 0 END) AS receitas,
-            SUM(CASE WHEN tipo='despesa' THEN valor ELSE 0 END) AS despesas
-            FROM financial_entries
-            WHERE YEAR(data_movimentacao) = :year";
-
-        $params = ['year' => $year];
-        if ($periodType === 'month' && $month !== null) {
-            $sql .= ' AND MONTH(data_movimentacao) = :month';
-            $params['month'] = $month;
-        }
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        $row = $stmt->fetch() ?: [];
-
-        $receitas = (float)($row['receitas'] ?? 0);
-        $despesas = (float)($row['despesas'] ?? 0);
-
-        return [
-            'receitas' => $receitas,
-            'despesas' => $despesas,
-            'saldo' => $receitas - $despesas,
-        ];
-    }
-
-    public function monthlySummaryByYear(int $year): array
-    {
-        $stmt = $this->db->prepare("SELECT
-            MONTH(data_movimentacao) AS mes,
-            SUM(CASE WHEN tipo='receita' THEN valor ELSE 0 END) AS receitas,
-            SUM(CASE WHEN tipo='despesa' THEN valor ELSE 0 END) AS despesas
-            FROM financial_entries
-            WHERE YEAR(data_movimentacao) = :year
-            GROUP BY MONTH(data_movimentacao)
-            ORDER BY MONTH(data_movimentacao) ASC");
-        $stmt->execute(['year' => $year]);
-
-        $rows = [];
-        foreach ($stmt->fetchAll() as $row) {
-            $receitas = (float)($row['receitas'] ?? 0);
-            $despesas = (float)($row['despesas'] ?? 0);
-            $rows[] = [
-                'mes' => (int)$row['mes'],
-                'receitas' => $receitas,
-                'despesas' => $despesas,
-                'saldo' => $receitas - $despesas,
-            ];
-        }
-
-        return $rows;
-    }
     public function monthSummary(): array
     {
         $sql = "SELECT

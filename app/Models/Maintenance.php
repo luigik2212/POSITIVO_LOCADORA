@@ -46,25 +46,6 @@ class Maintenance extends BaseModel
                                  GROUP BY m.vehicle_id ORDER BY total_gasto DESC')->fetchAll();
     }
 
-    public function totalSpentByVehicle(int $vehicleId, ?string $from = null, ?string $to = null): float
-    {
-        $sql = 'SELECT SUM(valor_gasto) FROM maintenances WHERE vehicle_id = :vehicle_id';
-        $params = ['vehicle_id' => $vehicleId];
-
-        if ($from) {
-            $sql .= ' AND data_manutencao >= :from';
-            $params['from'] = $from;
-        }
-        if ($to) {
-            $sql .= ' AND data_manutencao <= :to';
-            $params['to'] = $to;
-        }
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-
-        return (float)$stmt->fetchColumn();
-    }
     public function pending(int $limit = 5): array
     {
         $stmt = $this->db->prepare("SELECT m.*, v.nome as veiculo_nome, v.placa
