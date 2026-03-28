@@ -9,6 +9,7 @@
             <li class="nav-item"><a class="nav-link" href="<?= url('/rentals') ?>">Locações</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/maintenances') ?>">Manutenções</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/financial') ?>">Finanças</a></li>
+            <li class="nav-item"><a class="nav-link" href="<?= url('/reports') ?>">Relatórios</a></li>
         </ul>
 
         <div class="mt-auto pt-3">
