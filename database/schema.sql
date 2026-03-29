@@ -150,11 +150,26 @@ CREATE TABLE financial_entries (
   referencia_data DATE DEFAULT NULL,
   origem_automatica TINYINT(1) NOT NULL DEFAULT 0,
   parent_entry_id INT DEFAULT NULL,
+  fine_id INT DEFAULT NULL,
   data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (rental_id) REFERENCES rentals(id),
   FOREIGN KEY (maintenance_id) REFERENCES maintenances(id),
   FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
-  FOREIGN KEY (client_id) REFERENCES clients(id)
+  FOREIGN KEY (client_id) REFERENCES clients(id),
+  UNIQUE KEY uniq_financial_fine (fine_id)
+);
+
+CREATE TABLE rental_fines (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  rental_id INT NOT NULL,
+  auto_infracao VARCHAR(100) NOT NULL,
+  local_infracao VARCHAR(180) NOT NULL,
+  valor DECIMAL(10,2) NOT NULL,
+  data_hora_multa DATETIME NOT NULL,
+  data_vencimento DATE NOT NULL,
+  gerar_despesa_financeiro TINYINT(1) NOT NULL DEFAULT 0,
+  data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (rental_id) REFERENCES rentals(id)
 );
 
 INSERT INTO users (nome, login, email, senha, perfil, status, primeiro_login)

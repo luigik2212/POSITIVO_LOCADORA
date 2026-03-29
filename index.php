@@ -40,6 +40,7 @@ $router->get('/rentals', [RentalController::class, 'index'], true);
 $router->post('/rentals/store', [RentalController::class, 'store'], true);
 $router->post('/rentals/finalize', [RentalController::class, 'finalize'], true);
 $router->post('/rentals/cancel', [RentalController::class, 'cancel'], true);
+$router->post('/rentals/fines/store', [RentalController::class, 'storeFine'], true);
 
 $router->get('/maintenances', [MaintenanceController::class, 'index'], true);
 $router->get('/maintenances/report', [MaintenanceController::class, 'report'], true);
