@@ -3,10 +3,10 @@
         <h5 class="text-white text-center mb-4">Locadora</h5>
         <ul class="nav flex-column">
             <li class="nav-item"><a class="nav-link" href="<?= url('/') ?>">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles') ?>">Veículos</a></li>
-            <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles/mileage-history') ?>">Histórico KM</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/clients') ?>">Clientes</a></li>
+            <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles') ?>">Veículos</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/rentals') ?>">Locações</a></li>
+            <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles/mileage-history') ?>">Histórico KM</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/maintenances') ?>">Manutenções</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/financial') ?>">Finanças</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/reports') ?>">Relatórios</a></li>
