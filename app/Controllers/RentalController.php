@@ -30,8 +30,10 @@ class RentalController extends Controller
             'to' => $_GET['to'] ?? null,
         ];
 
+        $rentals = $rentalModel->all($filters);
+
         $this->view('rentals/index', [
-            'rentals' => $rentalModel->all($filters),
+            'rentals' => $rentals,
             'clients' => $clientModel->all(),
             'vehicles' => $vehicleModel->available(),
             'allVehicles' => $vehicleModel->all(),

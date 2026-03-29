@@ -12,6 +12,11 @@ function formatDateBr(value) {
   return dt.toLocaleDateString('pt-BR');
 }
 
+function formatMoneyBr(value) {
+  const amount = Number(value || 0);
+  return `R$ ${amount.toFixed(2).replace('.', ',')}`;
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
@@ -123,8 +128,15 @@ function openRentalView(rental) {
     inicio: formatDateBr(rental.data_inicio),
     fim: formatDateBr(rental.data_prevista_termino),
     km_saida: rental.quilometragem_saida,
-    valor: `R$ ${Number(rental.valor_total_previsto || 0).toFixed(2)}`,
-    caucao: `R$ ${Number(rental.caucao || 0).toFixed(2)}`,
+    km_retorno: rental.quilometragem_retorno || '-',
+    valor: formatMoneyBr(rental.valor_total_previsto || 0),
+    caucao: formatMoneyBr(rental.caucao || 0),
+    fim_real: rental.data_real_termino ? formatDateBr(rental.data_real_termino) : '-',
+    fin_total: formatMoneyBr(rental.financeiro_total_lancamentos || 0),
+    fin_pago: formatMoneyBr(rental.financeiro_total_pago || 0),
+    fin_pendente: formatMoneyBr(rental.financeiro_total_pendente || 0),
+    multas_qtd: Number(rental.total_multas_qtd || 0),
+    multas_total: formatMoneyBr(rental.total_multas_valor || 0),
     obs: rental.observacoes || '-',
   };
 
@@ -136,12 +148,76 @@ function openRentalView(rental) {
   const actionsWrap = document.getElementById('view_actions_wrap');
   const cancelId = document.getElementById('view_cancel_id');
   const devolverBtn = document.getElementById('view_devolver_btn');
+  const manageFinesLink = document.getElementById('view_manage_fines_link');
   if (cancelId) cancelId.value = rental.id;
   if (devolverBtn) {
     devolverBtn.onclick = () => fillFinalize(rental);
   }
+  if (manageFinesLink) {
+    manageFinesLink.href = withBase(`/fines?rental_id=${rental.id}`);
+  }
   if (actionsWrap) {
     actionsWrap.classList.toggle('d-none', rental.status !== 'ativa');
+  }
+}
+
+function openFineModal(fine = null) {
+  const form = document.getElementById('fineForm');
+  if (!form) return;
+  form.action = fine ? withBase('/fines/update') : withBase('/fines/store');
+
+  const id = document.getElementById('fine_id');
+  if (id) id.value = fine?.id || '';
+
+  const fields = ['rental_id', 'auto_infracao', 'local_infracao', 'valor', 'data_hora_multa', 'data_vencimento', 'observacoes'];
+  fields.forEach((field) => {
+    const el = document.getElementById('fine_' + field);
+    if (!el) return;
+    if (field === 'data_hora_multa') {
+      const raw = fine?.[field] || '';
+      el.value = raw ? String(raw).replace(' ', 'T').slice(0, 16) : '';
+      return;
+    }
+    el.value = fine?.[field] ?? '';
+  });
+
+  const checkbox = document.getElementById('fine_gerar_despesa_financeiro');
+  if (checkbox) checkbox.checked = Boolean(Number(fine?.gerar_despesa_financeiro || 0));
+
+  if (!fine) {
+    const preset = Number(window.finePresetRentalId || 0);
+    const rentalSelect = document.getElementById('fine_rental_id');
+    if (preset > 0 && rentalSelect) {
+      rentalSelect.value = String(preset);
+    }
+  }
+}
+
+function openFineView(fine) {
+  const map = {
+    rental: `#${fine.rental_id}`,
+    financial: fine.financial_entry_id ? 'Gerada no financeiro' : 'Não gerada',
+    cliente: fine.cliente_nome || '-',
+    veiculo: `${fine.veiculo_nome || '-'} (${fine.placa || '-'})`,
+    auto: fine.auto_infracao || '-',
+    local: fine.local_infracao || '-',
+    valor: formatMoneyBr(fine.valor || 0),
+    vencimento: formatDateBr(fine.data_vencimento),
+    obs: fine.observacoes || '-',
+  };
+
+  Object.entries(map).forEach(([key, value]) => {
+    const el = document.getElementById('fine_view_' + key);
+    if (el) el.textContent = value;
+  });
+}
+
+function openFineAttachmentModal(fine) {
+  const id = document.getElementById('fine_attachment_id');
+  const context = document.getElementById('fine_attachment_context');
+  if (id) id.value = fine.id || '';
+  if (context) {
+    context.textContent = `Multa #${fine.id} | Locação #${fine.rental_id} | Auto ${fine.auto_infracao || '-'}`;
   }
 }
 

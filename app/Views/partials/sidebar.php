@@ -6,6 +6,7 @@
             <li class="nav-item"><a class="nav-link" href="<?= url('/clients') ?>">Clientes</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles') ?>">Veículos</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/rentals') ?>">Locações</a></li>
+            <li class="nav-item"><a class="nav-link" href="<?= url('/fines') ?>">Multas</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/vehicles/mileage-history') ?>">Histórico KM</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/maintenances') ?>">Manutenções</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/financial') ?>">Finanças</a></li>

@@ -18,7 +18,7 @@ class FinancialEntry extends BaseModel
 
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO financial_entries (tipo, categoria, descricao, valor, data_movimentacao, rental_id, maintenance_id, vehicle_id, client_id, pagamento_status, recorrente, recorrencia_periodo, recorrencia_ativa, referencia_data, origem_automatica) VALUES (:tipo,:categoria,:descricao,:valor,:data_movimentacao,:rental_id,:maintenance_id,:vehicle_id,:client_id,:pagamento_status,:recorrente,:recorrencia_periodo,:recorrencia_ativa,:referencia_data,:origem_automatica)');
+        $stmt = $this->db->prepare('INSERT INTO financial_entries (tipo, categoria, descricao, valor, data_movimentacao, rental_id, maintenance_id, vehicle_id, client_id, pagamento_status, recorrente, recorrencia_periodo, recorrencia_ativa, referencia_data, origem_automatica, fine_id) VALUES (:tipo,:categoria,:descricao,:valor,:data_movimentacao,:rental_id,:maintenance_id,:vehicle_id,:client_id,:pagamento_status,:recorrente,:recorrencia_periodo,:recorrencia_ativa,:referencia_data,:origem_automatica,:fine_id)');
         $stmt->execute([
             ...$data,
             'pagamento_status' => $data['pagamento_status'] ?? 'nao_pago',
@@ -27,6 +27,7 @@ class FinancialEntry extends BaseModel
             'recorrencia_ativa' => !empty($data['recorrente']) ? 1 : 0,
             'referencia_data' => $data['referencia_data'] ?? $data['data_movimentacao'],
             'origem_automatica' => !empty($data['origem_automatica']) ? 1 : 0,
+            'fine_id' => $data['fine_id'] ?? null,
         ]);
 
         return (int)$this->db->lastInsertId();
@@ -292,6 +293,55 @@ class FinancialEntry extends BaseModel
         ];
     }
 
+    public function existsByFineId(int $fineId): bool
+    {
+        $stmt = $this->db->prepare('SELECT id FROM financial_entries WHERE fine_id = :fine_id LIMIT 1');
+        $stmt->execute(['fine_id' => $fineId]);
+        return (bool)$stmt->fetch();
+    }
+
+    public function deleteByFineId(int $fineId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM financial_entries WHERE fine_id = :fine_id');
+        $stmt->execute(['fine_id' => $fineId]);
+    }
+
+    public function syncFineExpense(array $fine): void
+    {
+        $fineId = (int)$fine['id'];
+        $existing = $this->db->prepare('SELECT id FROM financial_entries WHERE fine_id = :fine_id LIMIT 1');
+        $existing->execute(['fine_id' => $fineId]);
+        $entry = $existing->fetch();
+
+        $payload = [
+            'descricao' => 'Multa da locação #' . (int)$fine['rental_id'] . ' - Auto ' . (string)$fine['auto_infracao'],
+            'valor' => (float)$fine['valor'],
+            'data_movimentacao' => (string)$fine['data_vencimento'],
+            'rental_id' => (int)$fine['rental_id'],
+            'vehicle_id' => (int)$fine['vehicle_id'],
+            'client_id' => (int)$fine['client_id'],
+            'fine_id' => $fineId,
+        ];
+
+        if ($entry) {
+            $stmt = $this->db->prepare("UPDATE financial_entries SET tipo='despesa', categoria='multa', descricao=:descricao, valor=:valor, data_movimentacao=:data_movimentacao, rental_id=:rental_id, vehicle_id=:vehicle_id, client_id=:client_id, fine_id=:fine_id, origem_automatica=1 WHERE id=:id");
+            $stmt->execute([
+                ...$payload,
+                'id' => (int)$entry['id'],
+            ]);
+            return;
+        }
+
+        $this->create([
+            'tipo' => 'despesa',
+            'categoria' => 'multa',
+            ...$payload,
+            'maintenance_id' => null,
+            'pagamento_status' => 'nao_pago',
+            'origem_automatica' => 1,
+        ]);
+    }
+
     public function report(?string $from = null, ?string $to = null): array
     {
         $entries = $this->all($from, $to, null);
@@ -398,6 +448,7 @@ class FinancialEntry extends BaseModel
             'referencia_data' => "ALTER TABLE financial_entries ADD COLUMN referencia_data DATE DEFAULT NULL",
             'origem_automatica' => "ALTER TABLE financial_entries ADD COLUMN origem_automatica TINYINT(1) NOT NULL DEFAULT 0",
             'parent_entry_id' => "ALTER TABLE financial_entries ADD COLUMN parent_entry_id INT DEFAULT NULL",
+            'fine_id' => "ALTER TABLE financial_entries ADD COLUMN fine_id INT DEFAULT NULL",
         ];
 
         foreach ($columns as $column => $alter) {
@@ -406,6 +457,11 @@ class FinancialEntry extends BaseModel
             if (!$stmt->fetch()) {
                 $this->db->exec($alter);
             }
+        }
+
+        $indexCheck = $this->db->query("SHOW INDEX FROM financial_entries WHERE Key_name = 'uniq_financial_fine'")->fetch();
+        if (!$indexCheck) {
+            $this->db->exec('CREATE UNIQUE INDEX uniq_financial_fine ON financial_entries (fine_id)');
         }
     }
 }

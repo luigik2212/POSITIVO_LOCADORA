@@ -30,6 +30,9 @@
 <div class="col-md-4"><strong>Financeiro total:</strong> <span id="view_fin_total"></span></div>
 <div class="col-md-4"><strong>Financeiro pago:</strong> <span id="view_fin_pago"></span></div>
 <div class="col-md-4"><strong>Financeiro pendente:</strong> <span id="view_fin_pendente"></span></div>
+<div class="col-md-6"><strong>Multas:</strong> <span id="view_multas_qtd">0</span></div>
+<div class="col-md-6"><strong>Valor total de multas:</strong> <span id="view_multas_total">R$ 0,00</span></div>
+<div class="col-12"><a class="btn btn-outline-primary btn-sm" id="view_manage_fines_link" href="<?= url('/fines') ?>">Gerenciar multas</a></div>
 <div class="col-12"><strong>Observações:</strong> <span id="view_obs"></span></div>
 <div class="col-12 d-none" id="view_actions_wrap">
   <div class="border rounded p-2 d-flex gap-2">
