@@ -1,0 +1,17 @@
+<svg width="420" height="130" viewBox="0 0 420 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2F4F7"/>
+      <stop offset="1" stop-color="#AEB3BA"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D11C1C"/>
+      <stop offset="1" stop-color="#FF3B30"/>
+    </linearGradient>
+  </defs>
+  <rect width="420" height="130" rx="14" fill="#0D1119"/>
+  <path d="M15 37C92 8 287 8 404 28" stroke="url(#red)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M26 98C127 113 296 113 392 97" stroke="url(#red)" stroke-width="7" stroke-linecap="round"/>
+  <text x="44" y="77" fill="url(#silver)" font-size="56" font-family="Arial, Helvetica, sans-serif" font-style="italic" font-weight="700" letter-spacing="2">LGK</text>
+  <text x="49" y="108" fill="#E5E7EB" font-size="22" font-family="Arial, Helvetica, sans-serif" font-weight="700" letter-spacing="6">LOCADORA</text>
+</svg>
