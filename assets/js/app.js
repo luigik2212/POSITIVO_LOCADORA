@@ -12,6 +12,11 @@ function formatDateBr(value) {
   return dt.toLocaleDateString('pt-BR');
 }
 
+function formatMoneyBr(value) {
+  const amount = Number(value || 0);
+  return `R$ ${amount.toFixed(2).replace('.', ',')}`;
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
@@ -114,6 +119,10 @@ function fillFinalize(rental) {
 }
 
 function openRentalView(rental) {
+  const rentalFinesMap = window.rentalFinesMap || {};
+  const fines = Array.isArray(rentalFinesMap[rental.id]) ? rentalFinesMap[rental.id] : [];
+  const finesTotal = fines.reduce((total, fine) => total + Number(fine.valor || 0), 0);
+
   const map = {
     cliente: rental.cliente_nome,
     veiculo: `${rental.veiculo_nome} (${rental.placa})`,
@@ -123,8 +132,15 @@ function openRentalView(rental) {
     inicio: formatDateBr(rental.data_inicio),
     fim: formatDateBr(rental.data_prevista_termino),
     km_saida: rental.quilometragem_saida,
-    valor: `R$ ${Number(rental.valor_total_previsto || 0).toFixed(2)}`,
-    caucao: `R$ ${Number(rental.caucao || 0).toFixed(2)}`,
+    km_retorno: rental.quilometragem_retorno || '-',
+    valor: formatMoneyBr(rental.valor_total_previsto || 0),
+    caucao: formatMoneyBr(rental.caucao || 0),
+    fim_real: rental.data_real_termino ? formatDateBr(rental.data_real_termino) : '-',
+    fin_total: formatMoneyBr(rental.financeiro_total_lancamentos || 0),
+    fin_pago: formatMoneyBr(rental.financeiro_total_pago || 0),
+    fin_pendente: formatMoneyBr(rental.financeiro_total_pendente || 0),
+    multas_qtd: fines.length,
+    multas_total: formatMoneyBr(finesTotal),
     obs: rental.observacoes || '-',
   };
 
@@ -136,9 +152,34 @@ function openRentalView(rental) {
   const actionsWrap = document.getElementById('view_actions_wrap');
   const cancelId = document.getElementById('view_cancel_id');
   const devolverBtn = document.getElementById('view_devolver_btn');
+  const fineRentalId = document.getElementById('fine_rental_id');
+  const addFineBtn = document.getElementById('view_add_fine_btn');
+  const finesList = document.getElementById('view_fines_list');
   if (cancelId) cancelId.value = rental.id;
+  if (fineRentalId) fineRentalId.value = rental.id;
   if (devolverBtn) {
     devolverBtn.onclick = () => fillFinalize(rental);
+  }
+  if (addFineBtn) {
+    addFineBtn.onclick = () => {
+      if (fineRentalId) fineRentalId.value = rental.id;
+    };
+  }
+  if (finesList) {
+    if (!fines.length) {
+      finesList.innerHTML = '<tr><td colspan="6" class="text-muted text-center">Nenhuma multa cadastrada.</td></tr>';
+    } else {
+      finesList.innerHTML = fines.map((fine) => `
+        <tr>
+          <td>${fine.auto_infracao || '-'}</td>
+          <td>${fine.local_infracao || '-'}</td>
+          <td>${formatMoneyBr(fine.valor || 0)}</td>
+          <td>${formatDateBr((fine.data_hora_multa || '').slice(0, 10))}</td>
+          <td>${formatDateBr(fine.data_vencimento)}</td>
+          <td>${fine.financial_entry_id ? 'Gerada' : 'Não gerada'}</td>
+        </tr>
+      `).join('');
+    }
   }
   if (actionsWrap) {
     actionsWrap.classList.toggle('d-none', rental.status !== 'ativa');

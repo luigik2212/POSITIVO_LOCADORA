@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\FinancialEntry;
 use App\Models\MileageHistory;
 use App\Models\Rental;
+use App\Models\TrafficFine;
 use App\Models\Vehicle;
 
 class RentalController extends Controller
@@ -19,6 +20,7 @@ class RentalController extends Controller
         $rentalModel = new Rental();
         $clientModel = new Client();
         $vehicleModel = new Vehicle();
+        $fineModel = new TrafficFine();
 
         $status = $_GET['status'] ?? 'ativa';
         $filters = [
@@ -30,11 +32,14 @@ class RentalController extends Controller
             'to' => $_GET['to'] ?? null,
         ];
 
+        $rentals = $rentalModel->all($filters);
+
         $this->view('rentals/index', [
-            'rentals' => $rentalModel->all($filters),
+            'rentals' => $rentals,
             'clients' => $clientModel->all(),
             'vehicles' => $vehicleModel->available(),
             'allVehicles' => $vehicleModel->all(),
+            'rentalFines' => $fineModel->byRentalIds(array_map(static fn (array $rental): int => (int)$rental['id'], $rentals)),
             'filters' => $filters,
         ]);
     }
@@ -174,6 +179,65 @@ class RentalController extends Controller
         }
 
         flash('error', 'Locação inválida para cancelamento.');
+        $this->redirect('/rentals');
+    }
+
+    public function storeFine(): void
+    {
+        validateCsrf();
+
+        $rentalId = (int)($_POST['rental_id'] ?? 0);
+        $rentalModel = new Rental();
+        $rental = $rentalModel->find($rentalId);
+
+        if (!$rental) {
+            flash('error', 'Locação não encontrada para registrar multa.');
+            $this->redirect('/rentals');
+        }
+
+        $autoInfracao = trim((string)($_POST['auto_infracao'] ?? ''));
+        $localInfracao = trim((string)($_POST['local_infracao'] ?? ''));
+        $valor = (float)($_POST['valor'] ?? 0);
+        $dataHoraMulta = (string)($_POST['data_hora_multa'] ?? '');
+        $dataVencimento = (string)($_POST['data_vencimento'] ?? '');
+        $gerarDespesa = !empty($_POST['gerar_despesa_financeiro']) ? 1 : 0;
+
+        if ($autoInfracao === '' || $localInfracao === '' || $valor <= 0 || $dataHoraMulta === '' || $dataVencimento === '') {
+            flash('error', 'Preencha todos os campos obrigatórios da multa.');
+            $this->redirect('/rentals');
+        }
+
+        $fineModel = new TrafficFine();
+        $fineId = $fineModel->create([
+            'rental_id' => $rentalId,
+            'auto_infracao' => $autoInfracao,
+            'local_infracao' => $localInfracao,
+            'valor' => $valor,
+            'data_hora_multa' => $dataHoraMulta,
+            'data_vencimento' => $dataVencimento,
+            'gerar_despesa_financeiro' => $gerarDespesa,
+        ]);
+
+        if ($gerarDespesa === 1) {
+            $financialEntry = new FinancialEntry();
+            if (!$financialEntry->existsByFineId($fineId)) {
+                $financialEntry->create([
+                    'tipo' => 'despesa',
+                    'categoria' => 'multa',
+                    'descricao' => 'Multa da locação #' . $rentalId . ' - Auto ' . $autoInfracao,
+                    'valor' => $valor,
+                    'data_movimentacao' => $dataVencimento,
+                    'rental_id' => $rentalId,
+                    'maintenance_id' => null,
+                    'vehicle_id' => (int)$rental['vehicle_id'],
+                    'client_id' => (int)$rental['client_id'],
+                    'fine_id' => $fineId,
+                    'origem_automatica' => 1,
+                ]);
+            }
+        }
+
+        flash('success', 'Multa registrada com sucesso.');
         $this->redirect('/rentals');
     }
 

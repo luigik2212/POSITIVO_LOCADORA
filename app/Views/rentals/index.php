@@ -30,9 +30,21 @@
 <div class="col-md-4"><strong>Financeiro total:</strong> <span id="view_fin_total"></span></div>
 <div class="col-md-4"><strong>Financeiro pago:</strong> <span id="view_fin_pago"></span></div>
 <div class="col-md-4"><strong>Financeiro pendente:</strong> <span id="view_fin_pendente"></span></div>
+<div class="col-md-6"><strong>Multas:</strong> <span id="view_multas_qtd">0</span></div>
+<div class="col-md-6"><strong>Valor total de multas:</strong> <span id="view_multas_total">R$ 0,00</span></div>
+<div class="col-12">
+  <strong>Lista de multas:</strong>
+  <div class="table-responsive mt-1">
+    <table class="table table-sm table-bordered mb-0">
+      <thead><tr><th>Auto</th><th>Local</th><th>Valor</th><th>Data multa</th><th>Vencimento</th><th>Financeiro</th></tr></thead>
+      <tbody id="view_fines_list"><tr><td colspan="6" class="text-muted text-center">Nenhuma multa cadastrada.</td></tr></tbody>
+    </table>
+  </div>
+</div>
 <div class="col-12"><strong>Observações:</strong> <span id="view_obs"></span></div>
 <div class="col-12 d-none" id="view_actions_wrap">
   <div class="border rounded p-2 d-flex gap-2">
+    <button type="button" class="btn btn-warning btn-sm" id="view_add_fine_btn" data-bs-toggle="modal" data-bs-target="#fineModal" data-bs-dismiss="modal">Adicionar multa</button>
     <button type="button" class="btn btn-success btn-sm" id="view_devolver_btn" data-bs-toggle="modal" data-bs-target="#finalizeModal" data-bs-dismiss="modal">Devolver antes do prazo</button>
     <form method="POST" action="<?= url('/rentals/cancel') ?>" class="d-inline" onsubmit="return confirm('Cancelar locação?')">
       <input type="hidden" name="_token" value="<?= csrfToken() ?>">
@@ -42,6 +54,17 @@
   </div>
 </div>
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button></div></div></div></div>
+
+<div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/rentals/fines/store') ?>"><div class="modal-header"><h5>Cadastrar multa</h5></div><div class="modal-body row g-2">
+<input type="hidden" name="_token" value="<?= csrfToken() ?>">
+<input type="hidden" name="rental_id" id="fine_rental_id">
+<div class="col-12"><label class="form-label">Auto da infração</label><input type="text" name="auto_infracao" class="form-control" required></div>
+<div class="col-12"><label class="form-label">Local</label><input type="text" name="local_infracao" class="form-control" required></div>
+<div class="col-md-6"><label class="form-label">Valor</label><input type="number" step="0.01" min="0.01" name="valor" class="form-control" required></div>
+<div class="col-md-6"><label class="form-label">Data e hora da multa</label><input type="datetime-local" name="data_hora_multa" class="form-control" required></div>
+<div class="col-md-8"><label class="form-label">Data de vencimento</label><input type="date" name="data_vencimento" class="form-control" required></div>
+<div class="col-md-4 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" value="1" name="gerar_despesa_financeiro" id="fine_generate_financial"><label class="form-check-label" for="fine_generate_financial">Virar despesa</label></div></div>
+</div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-primary">Salvar multa</button></div></form></div></div></div>
 
 <div class="modal fade" id="rentalModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><form method="POST" action="<?= url('/rentals/store') ?>" enctype="multipart/form-data" id="rentalForm"><div class="modal-header"><h5>Nova locação</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>">
@@ -71,4 +94,7 @@
 <div class="col-12"><label class="form-label">Devolução - observações</label><textarea class="form-control" name="checklist_devolucao_observacoes"></textarea></div>
 <div class="col-12"><label class="form-label">Anexos devolução</label><input type="file" class="form-control" name="anexos_devolucao[]" multiple accept="image/*,video/*"></div>
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-success">Finalizar</button></div></form></div></div></div>
+<script>
+  window.rentalFinesMap = <?= json_encode($rentalFines ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+</script>
 <?php require __DIR__ . '/../partials/footer.php'; ?>
