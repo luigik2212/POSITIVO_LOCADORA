@@ -118,6 +118,36 @@ class Rental extends BaseModel
         return (bool)$stmt->fetch();
     }
 
+    public function countByVehicle(int $vehicleId, ?string $from = null, ?string $to = null): array
+    {
+        $sql = "SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN status='ativa' THEN 1 ELSE 0 END) AS ativas,
+            SUM(CASE WHEN status='finalizada' THEN 1 ELSE 0 END) AS finalizadas,
+            SUM(CASE WHEN status='cancelada' THEN 1 ELSE 0 END) AS canceladas
+            FROM rentals
+            WHERE vehicle_id = :vehicle_id";
+        $params = ['vehicle_id' => $vehicleId];
+
+        if ($from) {
+            $sql .= ' AND data_inicio >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND data_inicio <= :to';
+            $params['to'] = $to;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetch() ?: [
+            'total' => 0,
+            'ativas' => 0,
+            'finalizadas' => 0,
+            'canceladas' => 0,
+        ];
+    }
     public function activeCount(): int
     {
         return (int)$this->db->query("SELECT COUNT(*) FROM rentals WHERE status='ativa'")->fetchColumn();
