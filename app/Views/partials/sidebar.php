@@ -1,9 +1,6 @@
 <nav class="col-md-2 d-md-block sidebar py-4">
     <div class="d-flex flex-column h-100 px-2">
-        <div class="text-center mb-4">
-            <img src="<?= url('/assets/img-lgk-logo.svg') ?>" alt="Logo Lgk Locadora" class="brand-logo mb-2">
-            <h5 class="brand-name mb-0">Lgk Locadora</h5>
-        </div>
+        <h5 class="brand-name text-center mb-4">Lgk Locadora</h5>
         <ul class="nav flex-column">
             <li class="nav-item"><a class="nav-link" href="<?= url('/') ?>">Dashboard</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('/clients') ?>">Clientes</a></li>

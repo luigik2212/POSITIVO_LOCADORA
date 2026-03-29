@@ -8,7 +8,6 @@
   <style>
     body { padding: 24px; }
     .pdf-header { border-bottom: 2px solid #d71920; padding-bottom: 12px; margin-bottom: 18px; }
-    .pdf-logo { max-width: 145px; height: auto; }
     .pdf-company { font-weight: 700; font-size: 1.1rem; color: #111827; }
     @media print { .no-print { display: none !important; } }
   </style>
@@ -21,13 +20,8 @@
 
 
   <div class="pdf-header d-flex justify-content-between align-items-center">
-    <div>
-      <img src="<?= url('/assets/img-lgk-logo.svg') ?>" alt="Logo Lgk Locadora" class="pdf-logo">
-    </div>
-    <div class="text-end">
-      <div class="pdf-company">Lgk Locadora</div>
-      <small class="text-muted">Relatório gerado em <?= date('d/m/Y H:i') ?></small>
-    </div>
+    <div class="pdf-company">Lgk Locadora</div>
+    <small class="text-muted">Relatório gerado em <?= date('d/m/Y H:i') ?></small>
   </div>
 
   <h4 class="mb-3">Relatório <?= $reportType === 'financial' ? 'Financeiro' : 'de Carro' ?></h4>

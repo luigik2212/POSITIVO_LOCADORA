@@ -15,18 +15,16 @@ body { background: var(--lgk-bg); color: #1f2937; }
   border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.brand-logo {
-  display: block;
-  max-width: 170px;
-  width: 100%;
-  height: auto;
-  margin: 0 auto;
-}
 
 .brand-name {
   color: #f8fafc;
   font-weight: 600;
   letter-spacing: .4px;
+}
+
+.brand-name-dark {
+  color: var(--lgk-dark);
+  font-weight: 700;
 }
 
 .sidebar .nav-link {
@@ -62,11 +60,6 @@ body { background: var(--lgk-bg); color: #1f2937; }
 
 .login-card { width: min(420px, 92vw); }
 
-.login-logo {
-  max-width: 220px;
-  width: 100%;
-  height: auto;
-}
 
 .table { border-radius: 10px; overflow: hidden; }
 .table thead th { font-weight: 600; }

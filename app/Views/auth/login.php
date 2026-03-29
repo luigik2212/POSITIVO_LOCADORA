@@ -5,17 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Lgk Locadora</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="icon" type="image/svg+xml" href="<?= url('/favicon.svg') ?>">
   <link href="<?= url('/assets/css/app.css') ?>" rel="stylesheet">
 </head>
 <body class="login-page" data-base-path="<?= esc(appBasePath()) ?>">
 <div class="login-card card shadow-lg border-0">
   <div class="card-body p-4">
-    <div class="text-center mb-3">
-      <img src="<?= url('/assets/img-lgk-logo.svg') ?>" alt="Logo Lgk Locadora" class="login-logo mb-2">
-      <h3 class="mb-1">Lgk Locadora</h3>
-      <p class="text-muted">Acesse o sistema</p>
-    </div>
+    <h3 class="text-center mb-1 brand-name-dark">Lgk Locadora</h3>
+    <p class="text-muted text-center mb-3">Acesse o sistema</p>
     <?php if ($msg = flash('error')): ?><div class="alert alert-danger"><?= esc($msg) ?></div><?php endif; ?>
     <?php if ($msg = flash('success')): ?><div class="alert alert-success"><?= esc($msg) ?></div><?php endif; ?>
     <form method="POST" action="<?= url('/login') ?>">
