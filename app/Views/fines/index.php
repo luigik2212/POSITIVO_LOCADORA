@@ -88,6 +88,7 @@ $statusClasses = [
     </tbody>
   </table>
 </div>
+<?php require __DIR__ . '/../partials/pagination.php'; ?>
 
 <div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/fines/store') ?>" id="fineForm"><div class="modal-header"><h5 id="fineModalTitle">Cadastro de multa</h5></div><div class="modal-body row g-2">
   <input type="hidden" name="_token" value="<?= csrfToken() ?>">

@@ -13,15 +13,45 @@ class VehicleController extends Controller
     public function index(): void
     {
         $vehicleModel = new Vehicle();
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $search = $_GET['search'] ?? null;
+        $status = $_GET['status'] ?? null;
+        $pagination = $vehicleModel->paginate($search, $status, $page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $vehicleModel->paginate($search, $status, $page, $perPage);
+        }
+
         $this->view('vehicles/index', [
-            'vehicles' => $vehicleModel->all($_GET['search'] ?? null, $_GET['status'] ?? null),
+            'vehicles' => $pagination['data'],
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'queryParams' => [
+                'search' => $search,
+                'status' => $status,
+            ],
         ]);
     }
 
     public function mileageHistory(): void
     {
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $historyModel = new MileageHistory();
+        $pagination = $historyModel->paginate($page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $historyModel->paginate($page, $perPage);
+        }
+
         $this->view('vehicles/mileage-history', [
-            'history' => (new MileageHistory())->all(),
+            'history' => $pagination['data'],
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'queryParams' => [],
         ]);
     }
 

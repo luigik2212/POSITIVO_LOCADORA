@@ -101,4 +101,37 @@ class Maintenance extends BaseModel
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
+
+    public function paginate(?int $vehicleId, int $page, int $perPage): array
+    {
+        $where = ' WHERE 1=1';
+        $params = [];
+        if ($vehicleId) {
+            $where .= ' AND m.vehicle_id = :vehicle_id';
+            $params['vehicle_id'] = $vehicleId;
+        }
+
+        $countStmt = $this->db->prepare('SELECT COUNT(*) FROM maintenances m' . $where);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        $offset = max(0, ($page - 1) * $perPage);
+        $sql = 'SELECT m.*, v.nome as veiculo_nome, v.placa
+                FROM maintenances m
+                JOIN vehicles v ON v.id = m.vehicle_id' . $where . '
+                ORDER BY m.id DESC
+                LIMIT :limit OFFSET :offset';
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'data' => $stmt->fetchAll(),
+            'total' => $total,
+        ];
+    }
 }

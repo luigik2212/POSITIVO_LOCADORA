@@ -34,6 +34,27 @@ class MileageHistory extends BaseModel
         return $this->db->query($sql)->fetchAll();
     }
 
+    public function paginate(int $page, int $perPage): array
+    {
+        $total = (int)$this->db->query('SELECT COUNT(*) FROM vehicle_mileage_history')->fetchColumn();
+        $offset = max(0, ($page - 1) * $perPage);
+
+        $sql = 'SELECT h.*, v.nome AS veiculo_nome, v.placa
+                FROM vehicle_mileage_history h
+                JOIN vehicles v ON v.id = h.vehicle_id
+                ORDER BY h.data_atualizacao DESC, h.id DESC
+                LIMIT :limit OFFSET :offset';
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'data' => $stmt->fetchAll(),
+            'total' => $total,
+        ];
+    }
+
     private function ensureTable(): void
     {
         $this->db->exec("CREATE TABLE IF NOT EXISTS vehicle_mileage_history (

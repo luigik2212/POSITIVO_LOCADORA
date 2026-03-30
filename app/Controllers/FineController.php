@@ -41,15 +41,26 @@ class FineController extends Controller
         $rentals = (new Rental())->all([]);
         $clients = (new Client())->all();
         $vehicles = (new Vehicle())->all();
-        $fines = $model->all($filters);
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $pagination = $model->paginate($filters, $page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $model->paginate($filters, $page, $perPage);
+        }
+        $fines = $pagination['data'];
+        $allFilteredFines = $model->all($filters);
 
         $totals = [
-            'qtd' => count($fines),
-            'valor' => array_reduce($fines, static fn (float $sum, array $fine): float => $sum + (float)$fine['valor'], 0.0),
+            'qtd' => count($allFilteredFines),
+            'valor' => array_reduce($allFilteredFines, static fn (float $sum, array $fine): float => $sum + (float)$fine['valor'], 0.0),
         ];
 
         $statusOptions = $this->statusOptions();
-        $this->view('fines/index', compact('filters', 'rentals', 'clients', 'vehicles', 'fines', 'totals', 'statusOptions'));
+        $currentPage = $page;
+        $queryParams = $filters;
+        $this->view('fines/index', compact('filters', 'rentals', 'clients', 'vehicles', 'fines', 'totals', 'statusOptions', 'currentPage', 'totalPages', 'queryParams'));
     }
 
     public function store(): void

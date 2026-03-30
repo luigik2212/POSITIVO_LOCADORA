@@ -20,6 +20,8 @@ class TrafficFine extends BaseModel
 
     public function all(array $filters = []): array
     {
+        [$whereSql, $params] = $this->buildFilterSql($filters);
+
         $sql = "SELECT rf.*, r.id AS rental_codigo, c.nome_completo AS cliente_nome, v.nome AS veiculo_nome, v.placa,
                 CASE
                     WHEN rf.status = 'pendente' AND rf.data_vencimento < CURDATE() THEN 'vencida'
@@ -31,66 +33,56 @@ class TrafficFine extends BaseModel
             JOIN clients c ON c.id = r.client_id
             JOIN vehicles v ON v.id = r.vehicle_id
             LEFT JOIN financial_entries fe ON fe.fine_id = rf.id
-            WHERE 1=1";
-        $params = [];
-
-        if (!empty($filters['rental_id'])) {
-            $sql .= ' AND rf.rental_id = :rental_id';
-            $params['rental_id'] = (int)$filters['rental_id'];
-        }
-        if (!empty($filters['client_id'])) {
-            $sql .= ' AND r.client_id = :client_id';
-            $params['client_id'] = (int)$filters['client_id'];
-        }
-        if (!empty($filters['vehicle_id'])) {
-            $sql .= ' AND r.vehicle_id = :vehicle_id';
-            $params['vehicle_id'] = (int)$filters['vehicle_id'];
-        }
-        if (!empty($filters['placa'])) {
-            $sql .= ' AND v.placa LIKE :placa';
-            $params['placa'] = '%' . trim((string)$filters['placa']) . '%';
-        }
-        if (!empty($filters['from'])) {
-            $sql .= ' AND DATE(rf.data_hora_multa) >= :from';
-            $params['from'] = $filters['from'];
-        }
-        if (!empty($filters['to'])) {
-            $sql .= ' AND DATE(rf.data_hora_multa) <= :to';
-            $params['to'] = $filters['to'];
-        }
-        if (!empty($filters['vencimento_from'])) {
-            $sql .= ' AND rf.data_vencimento >= :vencimento_from';
-            $params['vencimento_from'] = $filters['vencimento_from'];
-        }
-        if (!empty($filters['vencimento_to'])) {
-            $sql .= ' AND rf.data_vencimento <= :vencimento_to';
-            $params['vencimento_to'] = $filters['vencimento_to'];
-        }
-        if (($filters['financial_status'] ?? '') === 'gerada') {
-            $sql .= ' AND fe.id IS NOT NULL';
-        }
-        if (($filters['financial_status'] ?? '') === 'nao_gerada') {
-            $sql .= ' AND fe.id IS NULL';
-        }
-        if (($filters['due_state'] ?? '') === 'vencidas') {
-            $sql .= ' AND rf.data_vencimento < CURDATE()';
-        }
-        if (($filters['due_state'] ?? '') === 'a_vencer') {
-            $sql .= ' AND rf.data_vencimento >= CURDATE()';
-        }
-        if (!empty($filters['status'])) {
-            if ((string)$filters['status'] === self::STATUS_VENCIDA) {
-                $sql .= " AND ((rf.status = 'pendente' AND rf.data_vencimento < CURDATE()) OR rf.status = 'vencida')";
-            } else {
-                $sql .= ' AND rf.status = :status';
-                $params['status'] = (string)$filters['status'];
-            }
-        }
+            WHERE 1=1" . $whereSql;
 
         $sql .= ' ORDER BY rf.data_hora_multa DESC, rf.id DESC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function paginate(array $filters, int $page, int $perPage): array
+    {
+        [$whereSql, $params] = $this->buildFilterSql($filters);
+
+        $countSql = "SELECT COUNT(*)
+            FROM rental_fines rf
+            JOIN rentals r ON r.id = rf.rental_id
+            JOIN clients c ON c.id = r.client_id
+            JOIN vehicles v ON v.id = r.vehicle_id
+            LEFT JOIN financial_entries fe ON fe.fine_id = rf.id
+            WHERE 1=1" . $whereSql;
+        $countStmt = $this->db->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        $offset = max(0, ($page - 1) * $perPage);
+        $sql = "SELECT rf.*, r.id AS rental_codigo, c.nome_completo AS cliente_nome, v.nome AS veiculo_nome, v.placa,
+                CASE
+                    WHEN rf.status = 'pendente' AND rf.data_vencimento < CURDATE() THEN 'vencida'
+                    ELSE rf.status
+                END AS status_exibicao,
+                fe.id AS financial_entry_id
+            FROM rental_fines rf
+            JOIN rentals r ON r.id = rf.rental_id
+            JOIN clients c ON c.id = r.client_id
+            JOIN vehicles v ON v.id = r.vehicle_id
+            LEFT JOIN financial_entries fe ON fe.fine_id = rf.id
+            WHERE 1=1" . $whereSql . '
+            ORDER BY rf.data_hora_multa DESC, rf.id DESC
+            LIMIT :limit OFFSET :offset';
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'data' => $stmt->fetchAll(),
+            'total' => $total,
+        ];
     }
 
     public function byRentalIds(array $rentalIds): array
@@ -244,5 +236,66 @@ class TrafficFine extends BaseModel
                 $this->db->exec($alter);
             }
         }
+    }
+
+    private function buildFilterSql(array $filters): array
+    {
+        $sql = '';
+        $params = [];
+
+        if (!empty($filters['rental_id'])) {
+            $sql .= ' AND rf.rental_id = :rental_id';
+            $params['rental_id'] = (int)$filters['rental_id'];
+        }
+        if (!empty($filters['client_id'])) {
+            $sql .= ' AND r.client_id = :client_id';
+            $params['client_id'] = (int)$filters['client_id'];
+        }
+        if (!empty($filters['vehicle_id'])) {
+            $sql .= ' AND r.vehicle_id = :vehicle_id';
+            $params['vehicle_id'] = (int)$filters['vehicle_id'];
+        }
+        if (!empty($filters['placa'])) {
+            $sql .= ' AND v.placa LIKE :placa';
+            $params['placa'] = '%' . trim((string)$filters['placa']) . '%';
+        }
+        if (!empty($filters['from'])) {
+            $sql .= ' AND DATE(rf.data_hora_multa) >= :from';
+            $params['from'] = $filters['from'];
+        }
+        if (!empty($filters['to'])) {
+            $sql .= ' AND DATE(rf.data_hora_multa) <= :to';
+            $params['to'] = $filters['to'];
+        }
+        if (!empty($filters['vencimento_from'])) {
+            $sql .= ' AND rf.data_vencimento >= :vencimento_from';
+            $params['vencimento_from'] = $filters['vencimento_from'];
+        }
+        if (!empty($filters['vencimento_to'])) {
+            $sql .= ' AND rf.data_vencimento <= :vencimento_to';
+            $params['vencimento_to'] = $filters['vencimento_to'];
+        }
+        if (($filters['financial_status'] ?? '') === 'gerada') {
+            $sql .= ' AND fe.id IS NOT NULL';
+        }
+        if (($filters['financial_status'] ?? '') === 'nao_gerada') {
+            $sql .= ' AND fe.id IS NULL';
+        }
+        if (($filters['due_state'] ?? '') === 'vencidas') {
+            $sql .= ' AND rf.data_vencimento < CURDATE()';
+        }
+        if (($filters['due_state'] ?? '') === 'a_vencer') {
+            $sql .= ' AND rf.data_vencimento >= CURDATE()';
+        }
+        if (!empty($filters['status'])) {
+            if ((string)$filters['status'] === self::STATUS_VENCIDA) {
+                $sql .= " AND ((rf.status = 'pendente' AND rf.data_vencimento < CURDATE()) OR rf.status = 'vencida')";
+            } else {
+                $sql .= ' AND rf.status = :status';
+                $params['status'] = (string)$filters['status'];
+            }
+        }
+
+        return [$sql, $params];
     }
 }

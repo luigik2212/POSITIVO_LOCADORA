@@ -24,6 +24,7 @@
 </tr>
 <?php endforeach; ?>
 </tbody></table></div>
+<?php require __DIR__ . '/../partials/pagination.php'; ?>
 
 <div class="modal fade" id="vehicleModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><form method="POST" id="vehicleForm" action="<?= url('/vehicles/store') ?>"><div class="modal-header"><h5 class="modal-title">Veículo</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" id="vehicle_id">
