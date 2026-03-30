@@ -31,7 +31,7 @@
 <div class="table-responsive">
 <table class="table table-striped align-middle">
   <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><?php if ($tab === 'receivable'): ?><th>Cliente</th><?php endif; ?><th class="text-end">Ações</th></tr></thead>
-  <tbody><?php foreach($entries as $e): ?><tr>
+  <tbody><?php foreach($entries as $e): ?><tr class="<?= (!empty($_GET['pending_km_entry']) && (int)$_GET['pending_km_entry'] === (int)$e['id']) ? 'table-warning' : '' ?>">
     <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
     <td>R$ <?= number_format($e['valor'],2,',','.') ?></td>
     <td>
@@ -51,6 +51,20 @@
     <?php if ($tab === 'receivable'): ?><td><?= esc($e['cliente_nome']) ?></td><?php endif; ?>
     <td class="text-end">
       <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#financialModal" onclick='openFinancialModal(<?= json_encode($e, JSON_HEX_APOS|JSON_HEX_QUOT) ?>, "<?= esc($tab) ?>")'>Editar</button>
+      <?php if (($e['pagamento_status'] ?? '') === 'pago' && !empty($e['km_pendente_preenchimento'])): ?>
+        <button
+          class="btn btn-sm btn-outline-primary"
+          data-pending-km-entry="<?= (int)$e['id'] ?>"
+          data-bs-toggle="modal"
+          data-bs-target="#pendingMileageModal"
+          onclick='openPendingMileageModal(<?= json_encode([
+              'id' => (int)$e['id'],
+              'vehicle_label' => trim(((string)($e['veiculo_nome'] ?? '')) . (!empty($e['veiculo_placa']) ? ' (' . $e['veiculo_placa'] . ')' : '')),
+              'current_km' => (int)($e['veiculo_km_atual'] ?? 0),
+          ], JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>
+          Preencher KM
+        </button>
+      <?php endif; ?>
       <form method="POST" action="<?= url('/financial/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir movimentação?')"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $e['id'] ?>"><input type="hidden" name="tab" value="<?= esc($tab) ?>"><input type="hidden" name="from" value="<?= esc($from) ?>"><input type="hidden" name="to" value="<?= esc($to) ?>"><button class="btn btn-sm btn-danger">Excluir</button></form>
     </td>
   </tr><?php endforeach; ?></tbody>
@@ -114,11 +128,46 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" name="permitir_preencher_km_depois" value="1" class="btn btn-outline-primary" formnovalidate>Baixar e preencher KM depois</button>
           <button class="btn btn-primary">Confirmar baixa</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="pendingMileageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="pendingMileageForm" method="POST" action="<?= url('/financial/fill-missing-mileage') ?>">
+        <div class="modal-header">
+          <h5 class="modal-title">Preencher KM pendente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3" id="pendingMileageVehicle"></p>
+          <input type="hidden" name="_token" value="<?= csrfToken() ?>">
+          <input type="hidden" name="id" id="pendingMileageEntryId">
+          <input type="hidden" name="tab" value="<?= esc($tab) ?>">
+          <input type="hidden" name="from" value="<?= esc($from) ?>">
+          <input type="hidden" name="to" value="<?= esc($to) ?>">
+          <div>
+            <label class="form-label" for="pendingMileageInput">KM atual do veículo</label>
+            <input type="number" class="form-control" name="quilometragem_atual" id="pendingMileageInput" min="0" required>
+            <small class="text-muted" id="pendingMileageHint"></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary">Salvar KM</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.pendingMileageEntry = <?= (int)($_GET['pending_km_entry'] ?? 0) ?>;
+</script>
 
 <?php require __DIR__ . '/../partials/footer.php'; ?>

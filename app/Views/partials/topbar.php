@@ -21,7 +21,11 @@ $notificationsCount = (int)($globalNotificationsCount ?? 0);
             <?php else: ?>
                 <div class="list-group list-group-flush">
                     <?php foreach ($notifications as $notification): ?>
-                        <a href="<?= esc($notification['link'] ?? '#') ?>" class="list-group-item list-group-item-action notification-item">
+                        <?php
+                        $targetLink = $notification['link'] ?? '/';
+                        $openLink = url('/notifications/open?key=' . urlencode((string)($notification['key'] ?? '')) . '&redirect=' . urlencode((string)$targetLink));
+                        ?>
+                        <a href="<?= esc($openLink) ?>" class="list-group-item list-group-item-action notification-item <?= empty($notification['read']) ? 'notification-unread' : '' ?>">
                             <div class="d-flex justify-content-between gap-2">
                                 <span class="fw-semibold text-<?= esc($notification['severity'] ?? 'secondary') ?>"><?= esc($notification['title'] ?? 'Notificação') ?></span>
                                 <small class="text-muted"><?= isset($notification['days_left']) ? ((int)$notification['days_left'] < 0 ? 'Atrasado' : ((int)$notification['days_left'] . 'd')) : '' ?></small>
