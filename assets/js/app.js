@@ -214,7 +214,8 @@ function openFineModal(fine = null) {
 function parseFineFromElement(element) {
   if (!element || !element.dataset || !element.dataset.fine) return null;
   try {
-    return JSON.parse(element.dataset.fine);
+    const decoded = window.atob(element.dataset.fine);
+    return JSON.parse(decoded);
   } catch (error) {
     return null;
   }

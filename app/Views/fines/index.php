@@ -51,9 +51,10 @@
             <?php endif; ?>
           </td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#fineViewModal" data-fine='<?= esc(json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>' onclick="openFineViewFromElement(this)">Ver</button>
-            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#fineModal" data-fine='<?= esc(json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>' onclick="openFineModalFromElement(this)">Editar</button>
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fineAttachmentModal" data-fine='<?= esc(json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>' onclick="openFineAttachmentModalFromElement(this)">Comprovante</button>
+            <?php $finePayload = base64_encode((string)json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#fineViewModal" data-fine="<?= esc($finePayload) ?>" onclick="openFineViewFromElement(this)">Ver</button>
+            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#fineModal" data-fine="<?= esc($finePayload) ?>" onclick="openFineModalFromElement(this)">Editar</button>
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fineAttachmentModal" data-fine="<?= esc($finePayload) ?>" onclick="openFineAttachmentModalFromElement(this)">Comprovante</button>
             <form method="POST" action="<?= url('/fines/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir multa?')">
               <input type="hidden" name="_token" value="<?= csrfToken() ?>">
               <input type="hidden" name="id" value="<?= (int)$fine['id'] ?>">
