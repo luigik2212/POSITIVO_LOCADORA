@@ -59,12 +59,27 @@ function handlePaymentStatusChange(event, select) {
   form.submit();
 }
 
+function openPendingMileageModal(payload = null) {
+  const input = document.getElementById('pendingMileageInput');
+  const hint = document.getElementById('pendingMileageHint');
+  const vehicleText = document.getElementById('pendingMileageVehicle');
+  const entryIdField = document.getElementById('pendingMileageEntryId');
+  if (!input || !entryIdField) return;
+
+  const currentKm = Number(payload?.current_km || 0);
+  entryIdField.value = payload?.id || '';
+  input.min = String(Math.max(currentKm, 0));
+  input.value = String(Math.max(currentKm, 0));
+  if (hint) hint.textContent = `KM atual cadastrado: ${currentKm}`;
+  if (vehicleText) vehicleText.textContent = payload?.vehicle_label ? `Veículo: ${payload.vehicle_label}` : '';
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
   form.action = vehicle ? withBase('/vehicles/update') : withBase('/vehicles/store');
   document.getElementById('vehicle_id').value = vehicle?.id || '';
-  ['nome','marca','modelo','ano','placa','renavam','cor','quilometragem_atual','categoria','valor_diaria','valor_semanal','valor_mensal','status','observacoes'].forEach(k => {
+  ['nome','marca','modelo','ano','placa','renavam','cor','quilometragem_atual','proxima_revisao_km','categoria','valor_diaria','valor_semanal','valor_mensal','status','observacoes'].forEach(k => {
     const el = document.getElementById('v_' + k);
     if (el) el.value = vehicle?.[k] ?? (k === 'status' ? 'disponivel' : '');
   });
@@ -340,6 +355,14 @@ function updatePricePreview() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const pendingEntry = Number(window.pendingMileageEntry || 0);
+  if (pendingEntry > 0) {
+    const trigger = document.querySelector(`button[data-pending-km-entry="${pendingEntry}"]`);
+    if (trigger && typeof trigger.click === 'function') {
+      trigger.click();
+    }
+  }
+
   const vehicleSearch = document.getElementById('f_vehicle_search');
   const vehicleId = document.getElementById('f_vehicle_id');
   if (vehicleSearch && vehicleId) {

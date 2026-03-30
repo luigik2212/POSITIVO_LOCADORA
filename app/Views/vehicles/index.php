@@ -10,11 +10,11 @@
 </div>
 <div class="table-responsive">
   <table class="table table-striped align-middle">
-    <thead><tr><th>Nome</th><th>Placa</th><th>Status</th><th>KM</th><th>Diária</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Nome</th><th>Placa</th><th>Status</th><th>KM</th><th>Próx. revisão KM</th><th>Diária</th><th>Ações</th></tr></thead>
     <tbody>
 <?php foreach ($vehicles as $v): ?>
 <tr>
-  <td><?= esc($v['nome']) ?></td><td><?= esc($v['placa']) ?></td><td><span class="badge bg-secondary"><?= esc($v['status']) ?></span></td><td><?= (int)$v['quilometragem_atual'] ?></td><td>R$ <?= number_format($v['valor_diaria'],2,',','.') ?></td>
+  <td><?= esc($v['nome']) ?></td><td><?= esc($v['placa']) ?></td><td><span class="badge bg-secondary"><?= esc($v['status']) ?></span></td><td><?= (int)$v['quilometragem_atual'] ?></td><td><?= $v['proxima_revisao_km'] !== null ? (int)$v['proxima_revisao_km'] : '-' ?></td><td>R$ <?= number_format($v['valor_diaria'],2,',','.') ?></td>
   <td>
     <div class="d-flex align-items-center gap-1 table-actions-cell">
       <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#vehicleModal" onclick='openVehicleModal(<?= json_encode($v, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Editar</button>
@@ -37,6 +37,7 @@ $fields=[
   'renavam' => ['Renavam', false, 'text'],
   'cor' => ['Cor', false, 'text'],
   'quilometragem_atual' => ['Km', true, 'number'],
+  'proxima_revisao_km' => ['Próx. revisão KM', false, 'number'],
   'categoria' => ['Categoria', false, 'text'],
   'valor_diaria' => ['Valor diária', true, 'number'],
   'valor_semanal' => ['Valor semanal', true, 'number'],

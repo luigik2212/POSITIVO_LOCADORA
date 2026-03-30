@@ -11,9 +11,11 @@ class Controller
     protected function view(string $view, array $data = []): void
     {
         if (isAuthenticated()) {
-            $notifications = (new NotificationCenter())->allActive();
+            $userId = (int)(authUser()['id'] ?? 0);
+            $center = new NotificationCenter();
+            $notifications = $center->allActive($userId, 15, 10, 0);
             $data['globalNotifications'] = $notifications;
-            $data['globalNotificationsCount'] = count($notifications);
+            $data['globalNotificationsCount'] = $center->unreadCount($userId);
         }
 
         extract($data);

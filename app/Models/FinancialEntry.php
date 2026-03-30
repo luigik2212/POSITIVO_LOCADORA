@@ -65,6 +65,15 @@ class FinancialEntry extends BaseModel
         $stmt->execute(['id' => $id, 'status' => $status]);
     }
 
+    public function markPendingMileageFill(int $id, bool $pending): void
+    {
+        $stmt = $this->db->prepare('UPDATE financial_entries SET km_pendente_preenchimento = :pending WHERE id = :id');
+        $stmt->execute([
+            'id' => $id,
+            'pending' => $pending ? 1 : 0,
+        ]);
+    }
+
 
     public function find(int $id): ?array
     {
@@ -462,6 +471,7 @@ class FinancialEntry extends BaseModel
             'origem_automatica' => "ALTER TABLE financial_entries ADD COLUMN origem_automatica TINYINT(1) NOT NULL DEFAULT 0",
             'parent_entry_id' => "ALTER TABLE financial_entries ADD COLUMN parent_entry_id INT DEFAULT NULL",
             'fine_id' => "ALTER TABLE financial_entries ADD COLUMN fine_id INT DEFAULT NULL",
+            'km_pendente_preenchimento' => "ALTER TABLE financial_entries ADD COLUMN km_pendente_preenchimento TINYINT(1) NOT NULL DEFAULT 0",
         ];
 
         foreach ($columns as $column => $alter) {

@@ -14,14 +14,18 @@ $notificationsCount = (int)($globalNotificationsCount ?? 0);
         <div class="dropdown-menu dropdown-menu-end p-0 notifications-menu">
             <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
                 <strong>Notificações</strong>
-                <small class="text-muted"><?= $notificationsCount ?> itens</small>
+                <small class="text-muted"><?= $notificationsCount ?> não lidas</small>
             </div>
             <?php if (empty($notifications)): ?>
                 <div class="px-3 py-3 text-muted small">Nenhum alerta ativo no momento.</div>
             <?php else: ?>
                 <div class="list-group list-group-flush">
                     <?php foreach ($notifications as $notification): ?>
-                        <a href="<?= esc($notification['link'] ?? '#') ?>" class="list-group-item list-group-item-action notification-item">
+                        <?php
+                        $targetLink = $notification['link'] ?? '/';
+                        $openLink = url('/notifications/open?key=' . urlencode((string)($notification['key'] ?? '')) . '&redirect=' . urlencode((string)$targetLink));
+                        ?>
+                        <a href="<?= esc($openLink) ?>" class="list-group-item list-group-item-action notification-item <?= empty($notification['read']) ? 'notification-unread' : '' ?>">
                             <div class="d-flex justify-content-between gap-2">
                                 <span class="fw-semibold text-<?= esc($notification['severity'] ?? 'secondary') ?>"><?= esc($notification['title'] ?? 'Notificação') ?></span>
                                 <small class="text-muted"><?= isset($notification['days_left']) ? ((int)$notification['days_left'] < 0 ? 'Atrasado' : ((int)$notification['days_left'] . 'd')) : '' ?></small>
@@ -29,6 +33,9 @@ $notificationsCount = (int)($globalNotificationsCount ?? 0);
                             <small class="d-block text-muted"><?= esc($notification['description'] ?? '') ?></small>
                         </a>
                     <?php endforeach; ?>
+                </div>
+                <div class="px-3 py-2 border-top text-end">
+                    <a href="<?= url('/notifications') ?>" class="small">Ver todas</a>
                 </div>
             <?php endif; ?>
         </div>
