@@ -17,16 +17,7 @@
     <div class="col-md-2">
       <select name="client_id" class="form-select"><option value="">Cliente</option><?php foreach ($clients as $c): ?><option value="<?= (int)$c['id'] ?>" <?= (string)($filters['client_id'] ?? '') === (string)$c['id'] ? 'selected' : '' ?>><?= esc($c['nome_completo']) ?></option><?php endforeach; ?></select>
     </div>
-    <div class="col-md-2">
-      <select name="vehicle_id" class="form-select"><option value="">Veículo</option><?php foreach ($vehicles as $v): ?><option value="<?= (int)$v['id'] ?>" <?= (string)($filters['vehicle_id'] ?? '') === (string)$v['id'] ? 'selected' : '' ?>><?= esc($v['nome']) ?></option><?php endforeach; ?></select>
-    </div>
     <div class="col-md-2"><input name="placa" class="form-control" placeholder="Placa" value="<?= esc($filters['placa'] ?? '') ?>"></div>
-    <div class="col-md-2"><input type="date" name="from" class="form-control" value="<?= esc($filters['from'] ?? '') ?>"></div>
-    <div class="col-md-2"><input type="date" name="to" class="form-control" value="<?= esc($filters['to'] ?? '') ?>"></div>
-    <div class="col-md-2"><input type="date" name="vencimento_from" class="form-control" value="<?= esc($filters['vencimento_from'] ?? '') ?>" title="Vencimento de"></div>
-    <div class="col-md-2"><input type="date" name="vencimento_to" class="form-control" value="<?= esc($filters['vencimento_to'] ?? '') ?>" title="Vencimento até"></div>
-    <div class="col-md-2"><select name="financial_status" class="form-select"><option value="">Financeiro</option><option value="gerada" <?= ($filters['financial_status'] ?? '')==='gerada'?'selected':'' ?>>Gerada</option><option value="nao_gerada" <?= ($filters['financial_status'] ?? '')==='nao_gerada'?'selected':'' ?>>Não gerada</option></select></div>
-    <div class="col-md-2"><select name="due_state" class="form-select"><option value="">Vencimento</option><option value="vencidas" <?= ($filters['due_state'] ?? '')==='vencidas'?'selected':'' ?>>Vencidas</option><option value="a_vencer" <?= ($filters['due_state'] ?? '')==='a_vencer'?'selected':'' ?>>A vencer</option></select></div>
     <div class="col-md-2 d-flex gap-2">
       <button class="btn btn-outline-primary w-100">Filtrar</button>
       <a class="btn btn-outline-secondary" href="<?= url('/fines') ?>">Limpar</a>
@@ -60,9 +51,9 @@
             <?php endif; ?>
           </td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#fineViewModal" onclick='openFineView(<?= json_encode($fine, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Ver</button>
-            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#fineModal" onclick='openFineModal(<?= json_encode($fine, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Editar</button>
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fineAttachmentModal" onclick='openFineAttachmentModal(<?= json_encode($fine, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Comprovante</button>
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#fineViewModal" data-fine='<?= esc(json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>' onclick="openFineViewFromElement(this)">Ver</button>
+            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#fineModal" data-fine='<?= esc(json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>' onclick="openFineModalFromElement(this)">Editar</button>
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fineAttachmentModal" data-fine='<?= esc(json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>' onclick="openFineAttachmentModalFromElement(this)">Comprovante</button>
             <form method="POST" action="<?= url('/fines/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir multa?')">
               <input type="hidden" name="_token" value="<?= csrfToken() ?>">
               <input type="hidden" name="id" value="<?= (int)$fine['id'] ?>">

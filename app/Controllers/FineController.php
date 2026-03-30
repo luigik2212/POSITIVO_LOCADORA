@@ -20,14 +20,7 @@ class FineController extends Controller
         $filters = [
             'rental_id' => $_GET['rental_id'] ?? null,
             'client_id' => $_GET['client_id'] ?? null,
-            'vehicle_id' => $_GET['vehicle_id'] ?? null,
             'placa' => $_GET['placa'] ?? null,
-            'from' => $_GET['from'] ?? null,
-            'to' => $_GET['to'] ?? null,
-            'vencimento_from' => $_GET['vencimento_from'] ?? null,
-            'vencimento_to' => $_GET['vencimento_to'] ?? null,
-            'financial_status' => $_GET['financial_status'] ?? null,
-            'due_state' => $_GET['due_state'] ?? null,
         ];
 
         $rentals = (new Rental())->all([]);

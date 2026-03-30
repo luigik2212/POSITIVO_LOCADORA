@@ -74,4 +74,7 @@
 <div class="col-12"><label class="form-label">Devolução - observações</label><textarea class="form-control" name="checklist_devolucao_observacoes"></textarea></div>
 <div class="col-12"><label class="form-label">Anexos devolução</label><input type="file" class="form-control" name="anexos_devolucao[]" multiple accept="image/*,video/*"></div>
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-success">Finalizar</button></div></form></div></div></div>
+<script>
+  window.rentalFinesSummaryMap = <?= json_encode($rentalFinesSummary ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+</script>
 <?php require __DIR__ . '/../partials/footer.php'; ?>

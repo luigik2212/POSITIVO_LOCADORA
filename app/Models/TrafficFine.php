@@ -98,6 +98,30 @@ class TrafficFine extends BaseModel
         return $grouped;
     }
 
+    public function summaryByRentalIds(array $rentalIds): array
+    {
+        if (empty($rentalIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($rentalIds), '?'));
+        $stmt = $this->db->prepare("SELECT rental_id, COUNT(*) AS qtd, SUM(valor) AS valor_total
+            FROM rental_fines
+            WHERE rental_id IN ($placeholders)
+            GROUP BY rental_id");
+        $stmt->execute(array_values($rentalIds));
+
+        $summary = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $summary[(int)$row['rental_id']] = [
+                'qtd' => (int)$row['qtd'],
+                'valor_total' => (float)$row['valor_total'],
+            ];
+        }
+
+        return $summary;
+    }
+
     public function create(array $data): int
     {
         $stmt = $this->db->prepare('INSERT INTO rental_fines (rental_id, auto_infracao, local_infracao, valor, data_hora_multa, data_vencimento, observacoes, gerar_despesa_financeiro) VALUES (:rental_id,:auto_infracao,:local_infracao,:valor,:data_hora_multa,:data_vencimento,:observacoes,:gerar_despesa_financeiro)');

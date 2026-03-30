@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\FinancialEntry;
 use App\Models\MileageHistory;
 use App\Models\Rental;
+use App\Models\TrafficFine;
 use App\Models\Vehicle;
 
 class RentalController extends Controller
@@ -19,6 +20,7 @@ class RentalController extends Controller
         $rentalModel = new Rental();
         $clientModel = new Client();
         $vehicleModel = new Vehicle();
+        $fineModel = new TrafficFine();
 
         $status = $_GET['status'] ?? 'ativa';
         $filters = [
@@ -31,12 +33,14 @@ class RentalController extends Controller
         ];
 
         $rentals = $rentalModel->all($filters);
+        $rentalIds = array_map(static fn (array $rental): int => (int)$rental['id'], $rentals);
 
         $this->view('rentals/index', [
             'rentals' => $rentals,
             'clients' => $clientModel->all(),
             'vehicles' => $vehicleModel->available(),
             'allVehicles' => $vehicleModel->all(),
+            'rentalFinesSummary' => $fineModel->summaryByRentalIds($rentalIds),
             'filters' => $filters,
         ]);
     }

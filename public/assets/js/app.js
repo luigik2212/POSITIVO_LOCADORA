@@ -119,6 +119,11 @@ function fillFinalize(rental) {
 }
 
 function openRentalView(rental) {
+  const finesSummaryMap = window.rentalFinesSummaryMap || {};
+  const fineSummary = finesSummaryMap[rental.id] || null;
+  const qtdMultas = fineSummary ? Number(fineSummary.qtd || 0) : Number(rental.total_multas_qtd || 0);
+  const valorMultas = fineSummary ? Number(fineSummary.valor_total || 0) : Number(rental.total_multas_valor || 0);
+
   const map = {
     cliente: rental.cliente_nome,
     veiculo: `${rental.veiculo_nome} (${rental.placa})`,
@@ -135,8 +140,8 @@ function openRentalView(rental) {
     fin_total: formatMoneyBr(rental.financeiro_total_lancamentos || 0),
     fin_pago: formatMoneyBr(rental.financeiro_total_pago || 0),
     fin_pendente: formatMoneyBr(rental.financeiro_total_pendente || 0),
-    multas_qtd: Number(rental.total_multas_qtd || 0),
-    multas_total: formatMoneyBr(rental.total_multas_valor || 0),
+    multas_qtd: qtdMultas,
+    multas_total: formatMoneyBr(valorMultas),
     obs: rental.observacoes || '-',
   };
 
@@ -193,6 +198,19 @@ function openFineModal(fine = null) {
   }
 }
 
+function parseFineFromElement(element) {
+  if (!element || !element.dataset || !element.dataset.fine) return null;
+  try {
+    return JSON.parse(element.dataset.fine);
+  } catch (error) {
+    return null;
+  }
+}
+
+function openFineModalFromElement(element) {
+  openFineModal(parseFineFromElement(element));
+}
+
 function openFineView(fine) {
   const map = {
     rental: `#${fine.rental_id}`,
@@ -212,6 +230,12 @@ function openFineView(fine) {
   });
 }
 
+function openFineViewFromElement(element) {
+  const fine = parseFineFromElement(element);
+  if (!fine) return;
+  openFineView(fine);
+}
+
 function openFineAttachmentModal(fine) {
   const id = document.getElementById('fine_attachment_id');
   const context = document.getElementById('fine_attachment_context');
@@ -219,6 +243,12 @@ function openFineAttachmentModal(fine) {
   if (context) {
     context.textContent = `Multa #${fine.id} | Locação #${fine.rental_id} | Auto ${fine.auto_infracao || '-'}`;
   }
+}
+
+function openFineAttachmentModalFromElement(element) {
+  const fine = parseFineFromElement(element);
+  if (!fine) return;
+  openFineAttachmentModal(fine);
 }
 
 function updatePricePreview() {
