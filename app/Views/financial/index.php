@@ -30,20 +30,20 @@
 
 <div class="table-responsive">
 <table class="table table-striped align-middle">
-  <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><?php if ($tab === 'receivable'): ?><th>Cliente</th><?php endif; ?><th class="text-end">Ações</th></tr></thead>
+  <thead><tr><th><?= $tab === 'payable' ? 'Data de Vencimento' : 'Data' ?></th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><?php if ($tab === 'receivable'): ?><th>Cliente</th><?php endif; ?><th class="text-end">Ações</th></tr></thead>
   <tbody><?php foreach($entries as $e): ?>
   <?php
-    $isOverdue = (($e['pagamento_status'] ?? 'nao_pago') !== 'pago') && strtotime((string)($e['data_movimentacao'] ?? '')) < strtotime(date('Y-m-d'));
+    $isOverdue = ($tab === 'payable') && (($e['pagamento_status'] ?? 'nao_pago') !== 'pago') && strtotime((string)($e['data_movimentacao'] ?? '')) < strtotime(date('Y-m-d'));
     $rowClass = (!empty($_GET['pending_km_entry']) && (int)$_GET['pending_km_entry'] === (int)$e['id']) ? 'table-warning' : '';
     if ($isOverdue) {
       $rowClass .= ' financial-overdue-row';
     }
   ?>
   <tr class="<?= trim($rowClass) ?>">
-    <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
+    <td class="<?= $isOverdue ? 'text-danger fw-semibold' : '' ?>"><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
     <td>R$ <?= number_format($e['valor'],2,',','.') ?></td>
     <td>
-      <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center js-payment-status-form">
+      <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center js-payment-status-form <?= $isOverdue ? 'financial-overdue-status' : '' ?>">
         <input type="hidden" name="_token" value="<?= csrfToken() ?>">
         <input type="hidden" name="id" value="<?= $e['id'] ?>">
         <input type="hidden" name="tab" value="<?= esc($tab) ?>">
