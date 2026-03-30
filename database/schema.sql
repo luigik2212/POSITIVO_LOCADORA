@@ -116,7 +116,7 @@ CREATE TABLE vehicle_mileage_history (
   vehicle_id INT NOT NULL,
   km_anterior INT NOT NULL,
   km_novo INT NOT NULL,
-  origem_atualizacao ENUM('manutencao','devolucao','edicao_manual') NOT NULL,
+  origem_atualizacao ENUM('manutencao','devolucao','edicao_manual','baixa_pagamento_semanal') NOT NULL,
   data_atualizacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
 );

@@ -17,6 +17,48 @@ function formatMoneyBr(value) {
   return `R$ ${amount.toFixed(2).replace('.', ',')}`;
 }
 
+
+function handlePaymentStatusChange(event, select) {
+  const form = select?.form;
+  if (!form) return;
+
+  const nextStatus = select.value;
+  const previousStatus = Array.from(select.options).find((option) => option.defaultSelected)?.value || 'nao_pago';
+  const requiresKm = select.dataset.requiresKm === '1';
+
+  if (nextStatus === 'pago' && requiresKm) {
+    event.preventDefault();
+    const modalEl = document.getElementById('weeklyMileageModal');
+    const input = document.getElementById('weeklyMileageInput');
+    const hint = document.getElementById('weeklyMileageHint');
+    const vehicleText = document.getElementById('weeklyMileageVehicle');
+    const entryIdField = document.getElementById('weeklyMileageEntryId');
+    if (!modalEl || !input || !entryIdField) {
+      form.submit();
+      return;
+    }
+
+    const currentKm = Number(select.dataset.currentKm || 0);
+    const vehicleLabel = select.dataset.vehicleLabel || '';
+    const idField = form.querySelector('input[name="id"]');
+    entryIdField.value = idField ? idField.value : '';
+    input.min = String(Math.max(currentKm, 0));
+    input.value = String(Math.max(currentKm, 0));
+    if (hint) hint.textContent = `KM atual cadastrado: ${currentKm}`;
+    if (vehicleText) vehicleText.textContent = vehicleLabel ? `Veículo: ${vehicleLabel}` : '';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      select.value = previousStatus;
+    }, { once: true });
+    return;
+  }
+
+  form.submit();
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
@@ -336,6 +378,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+  }
+
+
+  const weeklyMileageForm = document.getElementById('weeklyMileageForm');
+  if (weeklyMileageForm) {
+    weeklyMileageForm.addEventListener('submit', (event) => {
+      const input = document.getElementById('weeklyMileageInput');
+      const minKm = Number(input?.min || 0);
+      const valueKm = Number(input?.value || 0);
+      if (!input || !input.value || valueKm < minKm) {
+        event.preventDefault();
+        window.alert('Informe um KM válido (igual ou maior ao KM atual).');
+        input?.focus();
+      }
+    });
   }
 
   ['vehicleSelect', 'tipoCobranca', 'tempoContrato'].forEach(id => {
