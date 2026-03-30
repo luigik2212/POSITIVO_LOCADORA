@@ -35,13 +35,13 @@
     <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
     <td>R$ <?= number_format($e['valor'],2,',','.') ?></td>
     <td>
-      <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center">
+      <form method="POST" action="<?= url('/financial/payment-status') ?>" class="d-flex gap-1 align-items-center js-payment-status-form">
         <input type="hidden" name="_token" value="<?= csrfToken() ?>">
         <input type="hidden" name="id" value="<?= $e['id'] ?>">
         <input type="hidden" name="tab" value="<?= esc($tab) ?>">
         <input type="hidden" name="from" value="<?= esc($from) ?>">
         <input type="hidden" name="to" value="<?= esc($to) ?>">
-        <select class="form-select form-select-sm" name="pagamento_status" onchange="this.form.submit()">
+        <select class="form-select form-select-sm js-payment-status-select" name="pagamento_status" data-requires-km="<?= ($tab === 'receivable' && ($e['categoria'] ?? '') === 'locacao_semanal') ? '1' : '0' ?>" data-current-km="<?= (int)($e['veiculo_km_atual'] ?? 0) ?>" data-vehicle-label="<?= esc(trim(((string)($e['veiculo_nome'] ?? '')) . (!empty($e['veiculo_placa']) ? ' (' . $e['veiculo_placa'] . ')' : ''))) ?>" onchange="handlePaymentStatusChange(event, this)">
           <option value="nao_pago" <?= ($e['pagamento_status'] ?? 'nao_pago') === 'nao_pago' ? 'selected' : '' ?>>Não pago</option>
           <option value="pago" <?= ($e['pagamento_status'] ?? '') === 'pago' ? 'selected' : '' ?>>Pago</option>
         </select>
@@ -87,4 +87,38 @@
       ];
   }, $vehicles), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
+
+
+<div class="modal fade" id="weeklyMileageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="weeklyMileageForm" method="POST" action="<?= url('/financial/payment-status') ?>">
+        <div class="modal-header">
+          <h5 class="modal-title">Baixa semanal com KM</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Informe o KM atual para concluir a baixa da cobrança semanal.</p>
+          <p class="text-muted small mb-3" id="weeklyMileageVehicle"></p>
+          <input type="hidden" name="_token" value="<?= csrfToken() ?>">
+          <input type="hidden" name="id" id="weeklyMileageEntryId">
+          <input type="hidden" name="tab" value="<?= esc($tab) ?>">
+          <input type="hidden" name="from" value="<?= esc($from) ?>">
+          <input type="hidden" name="to" value="<?= esc($to) ?>">
+          <input type="hidden" name="pagamento_status" value="pago">
+          <div>
+            <label class="form-label" for="weeklyMileageInput">KM atual do veículo</label>
+            <input type="number" class="form-control" name="quilometragem_atual" id="weeklyMileageInput" min="0" required>
+            <small class="text-muted" id="weeklyMileageHint"></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary">Confirmar baixa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <?php require __DIR__ . '/../partials/footer.php'; ?>

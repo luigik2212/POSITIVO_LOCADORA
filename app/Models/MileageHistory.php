@@ -10,6 +10,7 @@ class MileageHistory extends BaseModel
     {
         parent::__construct();
         $this->ensureTable();
+        $this->ensureOriginEnum();
     }
 
     public function create(int $vehicleId, int $kmAnterior, int $kmNovo, string $origem): void
@@ -40,9 +41,20 @@ class MileageHistory extends BaseModel
             vehicle_id INT NOT NULL,
             km_anterior INT NOT NULL,
             km_novo INT NOT NULL,
-            origem_atualizacao ENUM('manutencao','devolucao','edicao_manual') NOT NULL,
+            origem_atualizacao ENUM('manutencao','devolucao','edicao_manual','baixa_pagamento_semanal') NOT NULL,
             data_atualizacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    }
+
+    private function ensureOriginEnum(): void
+    {
+        $stmt = $this->db->prepare('SHOW COLUMNS FROM vehicle_mileage_history LIKE :column_name');
+        $stmt->execute(['column_name' => 'origem_atualizacao']);
+        $column = $stmt->fetch();
+
+        if ($column && strpos((string)($column['Type'] ?? ''), 'baixa_pagamento_semanal') === false) {
+            $this->db->exec("ALTER TABLE vehicle_mileage_history MODIFY origem_atualizacao ENUM('manutencao','devolucao','edicao_manual','baixa_pagamento_semanal') NOT NULL");
+        }
     }
 }
