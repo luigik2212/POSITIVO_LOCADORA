@@ -51,10 +51,10 @@
             <?php endif; ?>
           </td>
           <td class="text-end">
-            <?php $finePayload = base64_encode((string)json_encode($fine, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>
-            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#fineViewModal" data-fine="<?= esc($finePayload) ?>" onclick="openFineViewFromElement(this)">Ver</button>
-            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#fineModal" data-fine="<?= esc($finePayload) ?>" onclick="openFineModalFromElement(this)">Editar</button>
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fineAttachmentModal" data-fine="<?= esc($finePayload) ?>" onclick="openFineAttachmentModalFromElement(this)">Comprovante</button>
+            <?php $finePayload = json_encode($fine, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#fineViewModal" data-fine='<?= $finePayload ?>' onclick="openFineViewFromElement(this)">Ver</button>
+            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#fineModal" data-fine='<?= $finePayload ?>' onclick="openFineModalFromElement(this)">Editar</button>
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fineAttachmentModal" data-fine='<?= $finePayload ?>' onclick="openFineAttachmentModalFromElement(this)">Comprovante</button>
             <form method="POST" action="<?= url('/fines/delete') ?>" class="d-inline" onsubmit="return confirm('Excluir multa?')">
               <input type="hidden" name="_token" value="<?= csrfToken() ?>">
               <input type="hidden" name="id" value="<?= (int)$fine['id'] ?>">
@@ -67,7 +67,7 @@
   </table>
 </div>
 
-<div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/fines/store') ?>" id="fineForm"><div class="modal-header"><h5>Cadastro de multa</h5></div><div class="modal-body row g-2">
+<div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/fines/store') ?>" id="fineForm"><div class="modal-header"><h5 id="fineModalTitle">Cadastro de multa</h5></div><div class="modal-body row g-2">
   <input type="hidden" name="_token" value="<?= csrfToken() ?>">
   <input type="hidden" name="id" id="fine_id">
   <div class="col-12"><label class="form-label">Locação vinculada</label><select required class="form-select" name="rental_id" id="fine_rental_id"><?php foreach ($rentals as $r): ?><option value="<?= (int)$r['id'] ?>">#<?= (int)$r['id'] ?> - <?= esc($r['cliente_nome'] ?? '') ?> | <?= esc($r['veiculo_nome'] ?? '') ?> (<?= esc($r['placa'] ?? '') ?>)</option><?php endforeach; ?></select></div>

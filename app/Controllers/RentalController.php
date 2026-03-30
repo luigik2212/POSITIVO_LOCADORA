@@ -34,13 +34,23 @@ class RentalController extends Controller
 
         $rentals = $rentalModel->all($filters);
         $rentalIds = array_map(static fn (array $rental): int => (int)$rental['id'], $rentals);
+        $rentalFinesSummary = $fineModel->summaryByRentalIds($rentalIds);
+
+        foreach ($rentals as &$rental) {
+            $summary = $rentalFinesSummary[(int)$rental['id']] ?? null;
+            if ($summary !== null) {
+                $rental['total_multas_qtd'] = $summary['qtd'];
+                $rental['total_multas_valor'] = $summary['valor_total'];
+            }
+        }
+        unset($rental);
 
         $this->view('rentals/index', [
             'rentals' => $rentals,
             'clients' => $clientModel->all(),
             'vehicles' => $vehicleModel->available(),
             'allVehicles' => $vehicleModel->all(),
-            'rentalFinesSummary' => $fineModel->summaryByRentalIds($rentalIds),
+            'rentalFinesSummary' => $rentalFinesSummary,
             'filters' => $filters,
         ]);
     }
