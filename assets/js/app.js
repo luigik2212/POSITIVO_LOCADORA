@@ -354,6 +354,34 @@ function updatePricePreview() {
   if (dayWrap) dayWrap.classList.toggle('d-none', key !== 'semanal');
 }
 
+function setupNotificationsLoadMore() {
+  const loadMoreButton = document.querySelector('[data-notifications-load-more]');
+  if (!loadMoreButton) return;
+
+  const list = document.querySelector('[data-notifications-list]');
+  if (!list) return;
+
+  const getHiddenItems = () => Array.from(list.querySelectorAll('[data-notification-item].d-none'));
+  const chunkSize = Number(loadMoreButton.dataset.chunkSize || 6);
+
+  const updateButtonState = () => {
+    const remaining = getHiddenItems().length;
+    if (remaining <= 0) {
+      loadMoreButton.classList.add('d-none');
+      return;
+    }
+    loadMoreButton.textContent = `Ver mais (${remaining})`;
+  };
+
+  loadMoreButton.addEventListener('click', () => {
+    const hiddenItems = getHiddenItems();
+    hiddenItems.slice(0, chunkSize).forEach((item) => item.classList.remove('d-none'));
+    updateButtonState();
+  });
+
+  updateButtonState();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const pendingEntry = Number(window.pendingMileageEntry || 0);
   if (pendingEntry > 0) {
@@ -425,4 +453,5 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   updatePricePreview();
   toggleRecurring();
+  setupNotificationsLoadMore();
 });

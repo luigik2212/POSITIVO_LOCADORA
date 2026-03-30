@@ -1,6 +1,9 @@
 <?php
 $notifications = $globalNotifications ?? [];
 $notificationsCount = (int)($globalNotificationsCount ?? 0);
+$notificationsInitialLimit = 6;
+$notificationsChunkSize = 6;
+$notificationsTotal = count($notifications);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
     <h4 class="mb-0">Painel Administrativo</h4>
@@ -19,13 +22,16 @@ $notificationsCount = (int)($globalNotificationsCount ?? 0);
             <?php if (empty($notifications)): ?>
                 <div class="px-3 py-3 text-muted small">Nenhum alerta ativo no momento.</div>
             <?php else: ?>
-                <div class="list-group list-group-flush">
-                    <?php foreach ($notifications as $notification): ?>
+                <div class="list-group list-group-flush" data-notifications-list>
+                    <?php foreach ($notifications as $index => $notification): ?>
                         <?php
                         $targetLink = $notification['link'] ?? '/';
                         $openLink = url('/notifications/open?key=' . urlencode((string)($notification['key'] ?? '')) . '&redirect=' . urlencode((string)$targetLink));
+                        $isHidden = $index >= $notificationsInitialLimit;
                         ?>
-                        <a href="<?= esc($openLink) ?>" class="list-group-item list-group-item-action notification-item <?= empty($notification['read']) ? 'notification-unread' : '' ?>">
+                        <a href="<?= esc($openLink) ?>"
+                           class="list-group-item list-group-item-action notification-item <?= empty($notification['read']) ? 'notification-unread' : '' ?> <?= $isHidden ? 'd-none' : '' ?>"
+                           data-notification-item>
                             <div class="d-flex justify-content-between gap-2">
                                 <span class="fw-semibold text-<?= esc($notification['severity'] ?? 'secondary') ?>"><?= esc($notification['title'] ?? 'Notificação') ?></span>
                                 <small class="text-muted"><?= isset($notification['days_left']) ? ((int)$notification['days_left'] < 0 ? 'Atrasado' : ((int)$notification['days_left'] . 'd')) : '' ?></small>
@@ -34,6 +40,17 @@ $notificationsCount = (int)($globalNotificationsCount ?? 0);
                         </a>
                     <?php endforeach; ?>
                 </div>
+                <?php if ($notificationsTotal > $notificationsInitialLimit): ?>
+                    <div class="notifications-load-more-wrap border-top px-3 py-2">
+                        <button type="button"
+                                class="btn btn-sm btn-link notifications-load-more p-0"
+                                data-notifications-load-more
+                                data-chunk-size="<?= $notificationsChunkSize ?>"
+                                data-total-items="<?= $notificationsTotal ?>">
+                            Ver mais
+                        </button>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
