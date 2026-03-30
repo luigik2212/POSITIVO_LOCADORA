@@ -31,7 +31,15 @@
 <div class="table-responsive">
 <table class="table table-striped align-middle">
   <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Veículo</th><?php if ($tab === 'receivable'): ?><th>Cliente</th><?php endif; ?><th class="text-end">Ações</th></tr></thead>
-  <tbody><?php foreach($entries as $e): ?><tr class="<?= (!empty($_GET['pending_km_entry']) && (int)$_GET['pending_km_entry'] === (int)$e['id']) ? 'table-warning' : '' ?>">
+  <tbody><?php foreach($entries as $e): ?>
+  <?php
+    $isOverdue = (($e['pagamento_status'] ?? 'nao_pago') !== 'pago') && strtotime((string)($e['data_movimentacao'] ?? '')) < strtotime(date('Y-m-d'));
+    $rowClass = (!empty($_GET['pending_km_entry']) && (int)$_GET['pending_km_entry'] === (int)$e['id']) ? 'table-warning' : '';
+    if ($isOverdue) {
+      $rowClass .= ' financial-overdue-row';
+    }
+  ?>
+  <tr class="<?= trim($rowClass) ?>">
     <td><?= esc(date('d/m/Y', strtotime((string)$e['data_movimentacao']))) ?></td><td><?= esc($e['categoria']) ?></td><td><?= esc($e['descricao']) ?><?= !empty($e['recorrente']) ? ' <span class="badge bg-info">Recorrente</span>' : '' ?></td>
     <td>R$ <?= number_format($e['valor'],2,',','.') ?></td>
     <td>
@@ -70,6 +78,7 @@
   </tr><?php endforeach; ?></tbody>
 </table>
 </div>
+<?php require __DIR__ . '/../partials/pagination.php'; ?>
 <div class="modal fade" id="financialModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/financial/store') ?>" id="financialForm"><div class="modal-header"><h5>Movimentação financeira</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" id="f_id"><input type="hidden" name="tab" id="f_tab" value="<?= esc($tab) ?>"><input type="hidden" name="from" value="<?= esc($from) ?>"><input type="hidden" name="to" value="<?= esc($to) ?>">
 <div class="col-6"><label class="form-label">Tipo</label><select class="form-select" name="tipo" id="f_tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>

@@ -15,8 +15,18 @@ class ClientController extends Controller
     {
         $clientModel = new Client();
         $rentalModel = new Rental();
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $search = $_GET['search'] ?? null;
 
-        $clients = $clientModel->all($_GET['search'] ?? null);
+        $pagination = $clientModel->paginate($search, $page, $perPage);
+        $clients = $pagination['data'];
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $clientModel->paginate($search, $page, $perPage);
+            $clients = $pagination['data'];
+        }
         $selectedClient = isset($_GET['client_id']) ? $clientModel->find((int)$_GET['client_id']) : null;
         $history = $selectedClient ? $rentalModel->all(['client_id' => (int)$selectedClient['id']]) : [];
 
@@ -28,6 +38,11 @@ class ClientController extends Controller
             'selectedClient' => $selectedClient,
             'history' => $history,
             'documentsByClient' => $documentsByClient,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'queryParams' => [
+                'search' => $search,
+            ],
         ]);
     }
 

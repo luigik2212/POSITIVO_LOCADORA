@@ -116,6 +116,48 @@ class FinancialEntry extends BaseModel
         return $stmt->fetchAll();
     }
 
+    public function paginate(?string $from, ?string $to, ?string $tipo, bool $dueDateAscending, int $page, int $perPage): array
+    {
+        $where = ' WHERE 1=1';
+        $params = [];
+        if ($from) {
+            $where .= ' AND fe.data_movimentacao >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $where .= ' AND fe.data_movimentacao <= :to';
+            $params['to'] = $to;
+        }
+        if ($tipo) {
+            $where .= ' AND fe.tipo = :tipo';
+            $params['tipo'] = $tipo;
+        }
+
+        $countStmt = $this->db->prepare('SELECT COUNT(*) FROM financial_entries fe' . $where);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        $offset = max(0, ($page - 1) * $perPage);
+        $order = $dueDateAscending ? ' ORDER BY fe.data_movimentacao ASC, fe.id ASC' : ' ORDER BY fe.data_movimentacao DESC, fe.id DESC';
+        $sql = 'SELECT fe.*, v.nome as veiculo_nome, v.placa as veiculo_placa, v.quilometragem_atual as veiculo_km_atual, c.nome_completo as cliente_nome
+                FROM financial_entries fe
+                LEFT JOIN vehicles v ON v.id = fe.vehicle_id
+                LEFT JOIN clients c ON c.id = fe.client_id' . $where . $order . '
+                LIMIT :limit OFFSET :offset';
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'data' => $stmt->fetchAll(),
+            'total' => $total,
+        ];
+    }
+
     public function upcomingDue(string $tipo, int $limit = 5): array
     {
         $stmt = $this->db->prepare("SELECT fe.*, v.nome AS veiculo_nome, c.nome_completo AS cliente_nome

@@ -22,11 +22,20 @@ class FinancialController extends Controller
         $to = $_GET['to'] ?? date('Y-m-t');
         $tab = ($_GET['tab'] ?? 'payable') === 'receivable' ? 'receivable' : 'payable';
         $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
 
-        $entries = $financial->all($from, $to, $tipo, true);
+        $pagination = $financial->paginate($from, $to, $tipo, true, $page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $financial->paginate($from, $to, $tipo, true, $page, $perPage);
+        }
+        $entries = $pagination['data'];
+        $allEntries = $financial->all($from, $to, $tipo, true);
         $vehicles = (new Vehicle())->all();
         $totals = ['total' => 0.0, 'paid' => 0.0];
-        foreach ($entries as $entry) {
+        foreach ($allEntries as $entry) {
             $value = (float)$entry['valor'];
             $totals['total'] += $value;
             if (($entry['pagamento_status'] ?? 'nao_pago') === 'pago') {
@@ -34,7 +43,13 @@ class FinancialController extends Controller
             }
         }
 
-        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'vehicles'));
+        $currentPage = $page;
+        $queryParams = [
+            'tab' => $tab,
+            'from' => $from,
+            'to' => $to,
+        ];
+        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'vehicles', 'currentPage', 'totalPages', 'queryParams'));
     }
 
     public function store(): void
