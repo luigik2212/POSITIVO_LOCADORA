@@ -13,6 +13,20 @@ use App\Models\Vehicle;
 
 class FineController extends Controller
 {
+    public function summary(): void
+    {
+        $rentalId = (int)($_GET['rental_id'] ?? 0);
+        if ($rentalId <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['qtd' => 0, 'valor_total' => 0]);
+            return;
+        }
+
+        $summary = (new TrafficFine())->summaryByRentalId($rentalId);
+        header('Content-Type: application/json');
+        echo json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
     public function index(): void
     {
         $model = new TrafficFine();

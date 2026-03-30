@@ -122,6 +122,18 @@ class TrafficFine extends BaseModel
         return $summary;
     }
 
+    public function summaryByRentalId(int $rentalId): array
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) AS qtd, COALESCE(SUM(valor), 0) AS valor_total FROM rental_fines WHERE rental_id = :rental_id');
+        $stmt->execute(['rental_id' => $rentalId]);
+        $row = $stmt->fetch() ?: [];
+
+        return [
+            'qtd' => (int)($row['qtd'] ?? 0),
+            'valor_total' => (float)($row['valor_total'] ?? 0),
+        ];
+    }
+
     public function create(array $data): int
     {
         $stmt = $this->db->prepare('INSERT INTO rental_fines (rental_id, auto_infracao, local_infracao, valor, data_hora_multa, data_vencimento, observacoes, gerar_despesa_financeiro) VALUES (:rental_id,:auto_infracao,:local_infracao,:valor,:data_hora_multa,:data_vencimento,:observacoes,:gerar_despesa_financeiro)');

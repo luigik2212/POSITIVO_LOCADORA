@@ -42,6 +42,7 @@ $router->post('/rentals/store', [RentalController::class, 'store'], true);
 $router->post('/rentals/finalize', [RentalController::class, 'finalize'], true);
 $router->post('/rentals/cancel', [RentalController::class, 'cancel'], true);
 $router->get('/fines', [FineController::class, 'index'], true);
+$router->get('/fines/summary', [FineController::class, 'summary'], true);
 $router->post('/fines/store', [FineController::class, 'store'], true);
 $router->post('/fines/update', [FineController::class, 'update'], true);
 $router->post('/fines/delete', [FineController::class, 'delete'], true);

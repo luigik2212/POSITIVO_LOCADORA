@@ -150,6 +150,19 @@ function openRentalView(rental) {
     if (el) el.textContent = value;
   });
 
+  if (typeof window.fetch === 'function') {
+    fetch(withBase(`/fines/summary?rental_id=${rental.id}`))
+      .then((response) => response.ok ? response.json() : null)
+      .then((summary) => {
+        if (!summary) return;
+        const qtd = document.getElementById('view_multas_qtd');
+        const total = document.getElementById('view_multas_total');
+        if (qtd) qtd.textContent = String(Number(summary.qtd || 0));
+        if (total) total.textContent = formatMoneyBr(summary.valor_total || 0);
+      })
+      .catch(() => {});
+  }
+
   const actionsWrap = document.getElementById('view_actions_wrap');
   const cancelId = document.getElementById('view_cancel_id');
   const devolverBtn = document.getElementById('view_devolver_btn');
