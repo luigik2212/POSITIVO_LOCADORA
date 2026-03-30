@@ -66,7 +66,7 @@ class FineController extends Controller
     {
         validateCsrf();
 
-        $id = (int)($_POST['id'] ?? 0);
+        $id = (int)($_POST['id'] ?? $_POST['fine_id'] ?? 0);
         $model = new TrafficFine();
         $current = $model->find($id);
         if (!$current) {
@@ -113,7 +113,7 @@ class FineController extends Controller
     {
         validateCsrf();
 
-        $id = (int)($_POST['id'] ?? 0);
+        $id = (int)($_POST['id'] ?? $_POST['fine_id'] ?? 0);
         $fineModel = new TrafficFine();
         $fine = $fineModel->find($id);
         if (!$fine) {
@@ -121,7 +121,8 @@ class FineController extends Controller
             $this->redirect('/fines');
         }
 
-        if (empty($_FILES['comprovante']['tmp_name']) || !is_uploaded_file($_FILES['comprovante']['tmp_name'])) {
+        $uploadError = (int)($_FILES['comprovante']['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($uploadError !== UPLOAD_ERR_OK || empty($_FILES['comprovante']['tmp_name']) || !is_uploaded_file($_FILES['comprovante']['tmp_name'])) {
             flash('error', 'Selecione um comprovante válido.');
             $this->redirect('/fines');
         }

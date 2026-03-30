@@ -67,7 +67,7 @@
   </table>
 </div>
 
-<div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/fines/store') ?>" id="fineForm"><div class="modal-header"><h5>Cadastro de multa</h5></div><div class="modal-body row g-2">
+<div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/fines/store') ?>" id="fineForm"><div class="modal-header"><h5 id="fineModalTitle">Cadastro de multa</h5></div><div class="modal-body row g-2">
   <input type="hidden" name="_token" value="<?= csrfToken() ?>">
   <input type="hidden" name="id" id="fine_id">
   <div class="col-12"><label class="form-label">Locação vinculada</label><select required class="form-select" name="rental_id" id="fine_rental_id"><?php foreach ($rentals as $r): ?><option value="<?= (int)$r['id'] ?>">#<?= (int)$r['id'] ?> - <?= esc($r['cliente_nome'] ?? '') ?> | <?= esc($r['veiculo_nome'] ?? '') ?> (<?= esc($r['placa'] ?? '') ?>)</option><?php endforeach; ?></select></div>
