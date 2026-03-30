@@ -227,11 +227,13 @@ function parseFineFromElement(element) {
   }
 
   try {
+
     const decoded = window.atob(raw);
     const normalized = decodeURIComponent(Array.from(decoded)
       .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
       .join(''));
     return JSON.parse(normalized);
+
   } catch (error) {
     return null;
   }

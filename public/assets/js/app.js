@@ -232,6 +232,7 @@ function parseFineFromElement(element) {
       .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
       .join(''));
     return JSON.parse(normalized);
+
   } catch (error) {
     return null;
   }
