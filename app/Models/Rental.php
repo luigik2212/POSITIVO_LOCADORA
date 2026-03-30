@@ -31,6 +31,7 @@ class Rental extends BaseModel
                 LEFT JOIN (
                     SELECT rental_id, SUM(valor) AS total_multas, COUNT(*) AS qtd_multas
                     FROM rental_fines
+                    WHERE status <> 'cancelada'
                     GROUP BY rental_id
                 ) fines ON fines.rental_id = r.id
                 WHERE 1=1";
@@ -111,6 +112,7 @@ class Rental extends BaseModel
             LEFT JOIN (
                 SELECT rental_id, SUM(valor) AS total_multas, COUNT(*) AS qtd_multas
                 FROM rental_fines
+                WHERE status <> 'cancelada'
                 GROUP BY rental_id
             ) fines ON fines.rental_id = r.id
             WHERE r.id=:id");

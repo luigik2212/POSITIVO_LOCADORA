@@ -35,6 +35,7 @@ class FineController extends Controller
             'rental_id' => $_GET['rental_id'] ?? null,
             'client_id' => $_GET['client_id'] ?? null,
             'placa' => $_GET['placa'] ?? null,
+            'status' => $_GET['status'] ?? null,
         ];
 
         $rentals = (new Rental())->all([]);
@@ -47,14 +48,15 @@ class FineController extends Controller
             'valor' => array_reduce($fines, static fn (float $sum, array $fine): float => $sum + (float)$fine['valor'], 0.0),
         ];
 
-        $this->view('fines/index', compact('filters', 'rentals', 'clients', 'vehicles', 'fines', 'totals'));
+        $statusOptions = $this->statusOptions();
+        $this->view('fines/index', compact('filters', 'rentals', 'clients', 'vehicles', 'fines', 'totals', 'statusOptions'));
     }
 
     public function store(): void
     {
         validateCsrf();
 
-        $payload = $this->finePayload();
+        $payload = $this->finePayload(false);
         $fineId = (new TrafficFine())->create($payload);
         $this->syncFinancial((new TrafficFine())->find($fineId));
 
@@ -74,7 +76,7 @@ class FineController extends Controller
             $this->redirect('/fines');
         }
 
-        $payload = $this->finePayload();
+        $payload = $this->finePayload(true);
         $payload['id'] = $id;
         $model->update($payload);
         $this->syncFinancial($model->find($id));
@@ -200,7 +202,7 @@ class FineController extends Controller
         exit;
     }
 
-    private function finePayload(): array
+    private function finePayload(bool $isUpdate): array
     {
         $rentalId = (int)($_POST['rental_id'] ?? 0);
         if ($rentalId <= 0) {
@@ -233,6 +235,9 @@ class FineController extends Controller
             'data_hora_multa' => $dataHora,
             'data_vencimento' => $vencimento,
             'observacoes' => trim((string)($_POST['observacoes'] ?? '')),
+            'status' => $isUpdate
+                ? $this->sanitizeStatus((string)($_POST['status'] ?? TrafficFine::STATUS_PENDENTE))
+                : TrafficFine::STATUS_PENDENTE,
             'gerar_despesa_financeiro' => !empty($_POST['gerar_despesa_financeiro']) ? 1 : 0,
         ];
     }
@@ -250,5 +255,21 @@ class FineController extends Controller
         }
 
         $financialModel->deleteByFineId((int)$fine['id']);
+    }
+
+    private function sanitizeStatus(string $status): string
+    {
+        $allowed = array_keys($this->statusOptions());
+        return in_array($status, $allowed, true) ? $status : TrafficFine::STATUS_PENDENTE;
+    }
+
+    private function statusOptions(): array
+    {
+        return [
+            TrafficFine::STATUS_PENDENTE => 'Pendente',
+            TrafficFine::STATUS_PAGA => 'Paga',
+            TrafficFine::STATUS_VENCIDA => 'Vencida',
+            TrafficFine::STATUS_CANCELADA => 'Cancelada',
+        ];
     }
 }

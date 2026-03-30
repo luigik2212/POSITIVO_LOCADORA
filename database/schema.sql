@@ -168,6 +168,7 @@ CREATE TABLE rental_fines (
   data_hora_multa DATETIME NOT NULL,
   data_vencimento DATE NOT NULL,
   observacoes TEXT,
+  status ENUM('pendente','paga','vencida','cancelada') NOT NULL DEFAULT 'pendente',
   gerar_despesa_financeiro TINYINT(1) NOT NULL DEFAULT 0,
   comprovante_path VARCHAR(255) DEFAULT NULL,
   comprovante_nome_original VARCHAR(255) DEFAULT NULL,
