@@ -216,8 +216,23 @@ function openFineModal(fine = null) {
 
 function parseFineFromElement(element) {
   if (!element || !element.dataset || !element.dataset.fine) return null;
+
+  const raw = String(element.dataset.fine || '').trim();
+  if (!raw) return null;
+
   try {
-    return JSON.parse(element.dataset.fine);
+    return JSON.parse(raw);
+  } catch (error) {
+    // fallback
+  }
+
+  try {
+    const decoded = window.atob(raw);
+    const normalized = decodeURIComponent(Array.from(decoded)
+      .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+      .join(''));
+    return JSON.parse(normalized);
+
   } catch (error) {
     return null;
   }
