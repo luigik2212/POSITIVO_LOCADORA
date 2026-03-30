@@ -8,6 +8,19 @@
 </div>
 <table class="table table-striped"><thead><tr><th>Veículo</th><th>Tipo</th><th>Data</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody><?php foreach($maintenances as $m): ?><tr><td><?= esc($m['veiculo_nome']) ?></td><td><?= esc($m['tipo_manutencao']) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$m['data_manutencao']))) ?></td><td>R$ <?= number_format($m['valor_gasto'],2,',','.') ?></td><td><?= esc($m['status']) ?></td><td><?php if($m['status']==='pendente'): ?><form method="POST" action="<?= url('/maintenances/update-status') ?>" class="d-inline"><input type="hidden" name="_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="<?= $m['id'] ?>"><input type="hidden" name="status" value="concluida"><button class="btn btn-sm btn-success">Concluir</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table>
 <div class="card"><div class="card-header">Total gasto por veículo</div><ul class="list-group list-group-flush"><?php foreach($totals as $t): ?><li class="list-group-item"><?= esc($t['nome']) ?> (<?= esc($t['placa']) ?>): R$ <?= number_format($t['total_gasto'],2,',','.') ?></li><?php endforeach; ?></ul></div>
+<div class="card mt-3">
+  <div class="card-header">Próximas revisões por KM</div>
+  <ul class="list-group list-group-flush">
+    <?php foreach($vehicles as $v): ?>
+      <?php if ($v['proxima_revisao_km'] === null) { continue; } ?>
+      <?php $isOverdue = (int)$v['quilometragem_atual'] >= (int)$v['proxima_revisao_km']; ?>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><?= esc($v['nome']) ?> (<?= esc($v['placa']) ?>) • KM atual: <?= (int)$v['quilometragem_atual'] ?> • Revisão: <?= (int)$v['proxima_revisao_km'] ?></span>
+        <span class="badge <?= $isOverdue ? 'bg-danger' : 'bg-secondary' ?>"><?= $isOverdue ? 'Revisão vencida' : 'No prazo' ?></span>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+</div>
 
 <div class="modal fade" id="maintenanceModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/maintenances/store') ?>"><div class="modal-header"><h5>Nova manutenção</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>">

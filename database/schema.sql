@@ -23,6 +23,7 @@ CREATE TABLE vehicles (
   renavam VARCHAR(20) DEFAULT NULL,
   cor VARCHAR(40) DEFAULT NULL,
   quilometragem_atual INT NOT NULL DEFAULT 0,
+  proxima_revisao_km INT DEFAULT NULL,
   categoria VARCHAR(60) DEFAULT NULL,
   valor_diaria DECIMAL(10,2) NOT NULL DEFAULT 0,
   valor_semanal DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -151,12 +152,24 @@ CREATE TABLE financial_entries (
   origem_automatica TINYINT(1) NOT NULL DEFAULT 0,
   parent_entry_id INT DEFAULT NULL,
   fine_id INT DEFAULT NULL,
+  km_pendente_preenchimento TINYINT(1) NOT NULL DEFAULT 0,
   data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (rental_id) REFERENCES rentals(id),
   FOREIGN KEY (maintenance_id) REFERENCES maintenances(id),
   FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
   FOREIGN KEY (client_id) REFERENCES clients(id),
   UNIQUE KEY uniq_financial_fine (fine_id)
+);
+
+CREATE TABLE notification_states (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  notification_key VARCHAR(190) NOT NULL,
+  viewed_at DATETIME DEFAULT NULL,
+  resolved_at DATETIME DEFAULT NULL,
+  data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_notification_user_key (user_id, notification_key),
+  FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE rental_fines (

@@ -6,24 +6,68 @@ namespace App\Models;
 
 class NotificationCenter extends BaseModel
 {
-    public function allActive(int $windowDays = 15): array
+    public function __construct()
     {
+        parent::__construct();
+        $this->ensureColumns();
+    }
+
+    public function allActive(int $userId, int $windowDays = 15): array
+    {
+        $states = (new NotificationState())->getByUser($userId);
         $notifications = array_merge(
             $this->contractEndingSoon($windowDays),
             $this->financialDueSoon($windowDays),
-            $this->finesDueSoon($windowDays)
+            $this->finesDueSoon($windowDays),
+            $this->maintenanceByMileage(),
+            $this->pendingMileageFill()
         );
 
+        $notifications = array_values(array_filter($notifications, static function (array $notification) use ($states): bool {
+            $key = (string)($notification['key'] ?? '');
+            if ($key === '') {
+                return true;
+            }
+
+            if (!empty($states[$key]['resolved_at']) && !empty($notification['dismiss_on_resolve'])) {
+                return false;
+            }
+
+            return true;
+        }));
+
+        foreach ($notifications as &$notification) {
+            $key = (string)($notification['key'] ?? '');
+            $notification['read'] = $key !== '' && !empty($states[$key]['viewed_at']);
+        }
+        unset($notification);
+
         usort($notifications, static function (array $a, array $b): int {
+            $priorityOrder = ['danger' => 0, 'warning' => 1, 'info' => 2, 'secondary' => 3];
+            $aPriority = $priorityOrder[$a['severity'] ?? 'secondary'] ?? 9;
+            $bPriority = $priorityOrder[$b['severity'] ?? 'secondary'] ?? 9;
+
+            $cmpPriority = $aPriority <=> $bPriority;
+            if ($cmpPriority !== 0) {
+                return $cmpPriority;
+            }
+
             $cmp = ($a['days_left'] ?? 9999) <=> ($b['days_left'] ?? 9999);
             if ($cmp !== 0) {
                 return $cmp;
             }
 
-            return strcmp((string)$a['due_date'], (string)$b['due_date']);
+            return strcmp((string)($a['due_date'] ?? ''), (string)($b['due_date'] ?? ''));
         });
 
         return $notifications;
+    }
+
+    public function unreadCount(int $userId, int $windowDays = 15): int
+    {
+        $all = $this->allActive($userId, $windowDays);
+        $unread = array_filter($all, static fn(array $item): bool => empty($item['read']));
+        return count($unread);
     }
 
     private function contractEndingSoon(int $windowDays): array
@@ -41,6 +85,7 @@ class NotificationCenter extends BaseModel
 
         return array_map(static function (array $row): array {
             return [
+                'key' => 'contract-ending-' . (int)$row['id'],
                 'type' => 'contrato',
                 'severity' => ((int)$row['days_left'] <= 3) ? 'danger' : 'warning',
                 'title' => 'Contrato perto do fim',
@@ -81,6 +126,7 @@ class NotificationCenter extends BaseModel
             $contextText = $context !== '' ? (' • ' . $context) : '';
 
             return [
+                'key' => 'financial-due-' . (int)$row['id'],
                 'type' => 'financeiro',
                 'severity' => $severity,
                 'title' => 'Conta a vencer',
@@ -116,6 +162,7 @@ class NotificationCenter extends BaseModel
 
         return array_map(static function (array $row): array {
             return [
+                'key' => 'fine-due-' . (int)$row['id'],
                 'type' => 'multa',
                 'severity' => ((int)$row['days_left'] <= 2) ? 'danger' : 'warning',
                 'title' => 'Multa a vencer',
@@ -133,5 +180,77 @@ class NotificationCenter extends BaseModel
                 'link' => url('/fines?rental_id=' . (int)$row['rental_id']),
             ];
         }, $stmt->fetchAll());
+    }
+
+    private function maintenanceByMileage(): array
+    {
+        $stmt = $this->db->query("SELECT id, nome, placa, quilometragem_atual, proxima_revisao_km
+            FROM vehicles
+            WHERE proxima_revisao_km IS NOT NULL
+              AND quilometragem_atual >= proxima_revisao_km");
+        $rows = $stmt->fetchAll();
+
+        return array_map(static function (array $row): array {
+            return [
+                'key' => 'maintenance-km-' . (int)$row['id'] . '-' . (int)$row['proxima_revisao_km'],
+                'type' => 'revisao_km',
+                'severity' => 'danger',
+                'title' => 'Revisão por KM pendente',
+                'description' => sprintf(
+                    '%s (%s) • KM atual: %d • revisão prevista: %d',
+                    $row['nome'],
+                    $row['placa'],
+                    (int)$row['quilometragem_atual'],
+                    (int)$row['proxima_revisao_km']
+                ),
+                'due_date' => date('Y-m-d'),
+                'days_left' => 0,
+                'link' => url('/maintenances?vehicle_id=' . (int)$row['id']),
+            ];
+        }, $rows);
+    }
+
+    private function pendingMileageFill(): array
+    {
+        $stmt = $this->db->query("SELECT fe.id, fe.data_movimentacao, v.nome, v.placa
+            FROM financial_entries fe
+            JOIN vehicles v ON v.id = fe.vehicle_id
+            WHERE fe.km_pendente_preenchimento = 1
+              AND fe.pagamento_status = 'pago'
+            ORDER BY fe.data_movimentacao DESC, fe.id DESC");
+
+        return array_map(static function (array $row): array {
+            return [
+                'key' => 'pending-km-entry-' . (int)$row['id'],
+                'type' => 'preencher_km',
+                'severity' => 'warning',
+                'title' => 'Preencher KM do veículo',
+                'description' => sprintf(
+                    'Cobrança #%d • %s (%s) • pagamento baixado sem KM',
+                    (int)$row['id'],
+                    $row['nome'],
+                    $row['placa']
+                ),
+                'due_date' => $row['data_movimentacao'],
+                'days_left' => 0,
+                'link' => url('/financial?tab=receivable&pending_km_entry=' . (int)$row['id']),
+                'dismiss_on_resolve' => true,
+            ];
+        }, $stmt->fetchAll());
+    }
+
+    private function ensureColumns(): void
+    {
+        $vehicleColumn = $this->db->prepare('SHOW COLUMNS FROM vehicles LIKE :column_name');
+        $vehicleColumn->execute(['column_name' => 'proxima_revisao_km']);
+        if (!$vehicleColumn->fetch()) {
+            $this->db->exec('ALTER TABLE vehicles ADD COLUMN proxima_revisao_km INT DEFAULT NULL AFTER quilometragem_atual');
+        }
+
+        $financialColumn = $this->db->prepare('SHOW COLUMNS FROM financial_entries LIKE :column_name');
+        $financialColumn->execute(['column_name' => 'km_pendente_preenchimento']);
+        if (!$financialColumn->fetch()) {
+            $this->db->exec('ALTER TABLE financial_entries ADD COLUMN km_pendente_preenchimento TINYINT(1) NOT NULL DEFAULT 0');
+        }
     }
 }

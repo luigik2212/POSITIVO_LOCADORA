@@ -115,6 +115,7 @@ class VehicleController extends Controller
             'renavam' => trim((string)($_POST['renavam'] ?? '')),
             'cor' => trim((string)($_POST['cor'] ?? '')),
             'quilometragem_atual' => (int)($_POST['quilometragem_atual'] ?? 0),
+            'proxima_revisao_km' => $this->nullableInt($_POST['proxima_revisao_km'] ?? null),
             'categoria' => trim((string)($_POST['categoria'] ?? '')),
             'valor_diaria' => (float)($_POST['valor_diaria'] ?? 0),
             'valor_semanal' => (float)($_POST['valor_semanal'] ?? 0),
@@ -143,5 +144,19 @@ class VehicleController extends Controller
         }
 
         return true;
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $raw = trim((string)$value);
+        if ($raw === '' || !ctype_digit($raw)) {
+            return null;
+        }
+
+        return (int)$raw;
     }
 }

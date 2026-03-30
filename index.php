@@ -16,6 +16,7 @@ use App\Controllers\MaintenanceController;
 use App\Controllers\FinancialController;
 use App\Controllers\FineController;
 use App\Controllers\ReportController;
+use App\Controllers\NotificationController;
 
 $router = new Router();
 
@@ -63,5 +64,7 @@ $router->post('/financial/store', [FinancialController::class, 'store'], true);
 $router->post('/financial/update', [FinancialController::class, 'update'], true);
 $router->post('/financial/delete', [FinancialController::class, 'delete'], true);
 $router->post('/financial/payment-status', [FinancialController::class, 'updatePaymentStatus'], true);
+$router->post('/financial/fill-missing-mileage', [FinancialController::class, 'fillMissingMileage'], true);
+$router->get('/notifications/open', [NotificationController::class, 'open'], true);
 
 $router->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
