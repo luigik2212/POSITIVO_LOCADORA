@@ -6,6 +6,11 @@ namespace App\Models;
 
 class TrafficFine extends BaseModel
 {
+    public const STATUS_PENDENTE = 'pendente';
+    public const STATUS_PAGA = 'paga';
+    public const STATUS_VENCIDA = 'vencida';
+    public const STATUS_CANCELADA = 'cancelada';
+
     public function __construct()
     {
         parent::__construct();
@@ -16,6 +21,10 @@ class TrafficFine extends BaseModel
     public function all(array $filters = []): array
     {
         $sql = "SELECT rf.*, r.id AS rental_codigo, c.nome_completo AS cliente_nome, v.nome AS veiculo_nome, v.placa,
+                CASE
+                    WHEN rf.status = 'pendente' AND rf.data_vencimento < CURDATE() THEN 'vencida'
+                    ELSE rf.status
+                END AS status_exibicao,
                 fe.id AS financial_entry_id
             FROM rental_fines rf
             JOIN rentals r ON r.id = rf.rental_id
@@ -69,6 +78,14 @@ class TrafficFine extends BaseModel
         if (($filters['due_state'] ?? '') === 'a_vencer') {
             $sql .= ' AND rf.data_vencimento >= CURDATE()';
         }
+        if (!empty($filters['status'])) {
+            if ((string)$filters['status'] === self::STATUS_VENCIDA) {
+                $sql .= " AND ((rf.status = 'pendente' AND rf.data_vencimento < CURDATE()) OR rf.status = 'vencida')";
+            } else {
+                $sql .= ' AND rf.status = :status';
+                $params['status'] = (string)$filters['status'];
+            }
+        }
 
         $sql .= ' ORDER BY rf.data_hora_multa DESC, rf.id DESC';
         $stmt = $this->db->prepare($sql);
@@ -83,7 +100,12 @@ class TrafficFine extends BaseModel
         }
 
         $placeholders = implode(',', array_fill(0, count($rentalIds), '?'));
-        $stmt = $this->db->prepare("SELECT rf.*, fe.id AS financial_entry_id
+        $stmt = $this->db->prepare("SELECT rf.*,
+                CASE
+                    WHEN rf.status = 'pendente' AND rf.data_vencimento < CURDATE() THEN 'vencida'
+                    ELSE rf.status
+                END AS status_exibicao,
+                fe.id AS financial_entry_id
             FROM rental_fines rf
             LEFT JOIN financial_entries fe ON fe.fine_id = rf.id
             WHERE rf.rental_id IN ($placeholders)
@@ -107,7 +129,7 @@ class TrafficFine extends BaseModel
         $placeholders = implode(',', array_fill(0, count($rentalIds), '?'));
         $stmt = $this->db->prepare("SELECT rental_id, COUNT(*) AS qtd, SUM(valor) AS valor_total
             FROM rental_fines
-            WHERE rental_id IN ($placeholders)
+            WHERE rental_id IN ($placeholders) AND status <> 'cancelada'
             GROUP BY rental_id");
         $stmt->execute(array_values($rentalIds));
 
@@ -124,7 +146,9 @@ class TrafficFine extends BaseModel
 
     public function summaryByRentalId(int $rentalId): array
     {
-        $stmt = $this->db->prepare('SELECT COUNT(*) AS qtd, COALESCE(SUM(valor), 0) AS valor_total FROM rental_fines WHERE rental_id = :rental_id');
+        $stmt = $this->db->prepare("SELECT COUNT(*) AS qtd, COALESCE(SUM(valor), 0) AS valor_total
+            FROM rental_fines
+            WHERE rental_id = :rental_id AND status <> 'cancelada'");
         $stmt->execute(['rental_id' => $rentalId]);
         $row = $stmt->fetch() ?: [];
 
@@ -136,14 +160,14 @@ class TrafficFine extends BaseModel
 
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO rental_fines (rental_id, auto_infracao, local_infracao, valor, data_hora_multa, data_vencimento, observacoes, gerar_despesa_financeiro) VALUES (:rental_id,:auto_infracao,:local_infracao,:valor,:data_hora_multa,:data_vencimento,:observacoes,:gerar_despesa_financeiro)');
+        $stmt = $this->db->prepare('INSERT INTO rental_fines (rental_id, auto_infracao, local_infracao, valor, data_hora_multa, data_vencimento, observacoes, status, gerar_despesa_financeiro) VALUES (:rental_id,:auto_infracao,:local_infracao,:valor,:data_hora_multa,:data_vencimento,:observacoes,:status,:gerar_despesa_financeiro)');
         $stmt->execute($data);
         return (int)$this->db->lastInsertId();
     }
 
     public function update(array $data): void
     {
-        $stmt = $this->db->prepare('UPDATE rental_fines SET rental_id=:rental_id, auto_infracao=:auto_infracao, local_infracao=:local_infracao, valor=:valor, data_hora_multa=:data_hora_multa, data_vencimento=:data_vencimento, observacoes=:observacoes, gerar_despesa_financeiro=:gerar_despesa_financeiro WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE rental_fines SET rental_id=:rental_id, auto_infracao=:auto_infracao, local_infracao=:local_infracao, valor=:valor, data_hora_multa=:data_hora_multa, data_vencimento=:data_vencimento, observacoes=:observacoes, status=:status, gerar_despesa_financeiro=:gerar_despesa_financeiro WHERE id=:id');
         $stmt->execute($data);
     }
 
@@ -156,6 +180,10 @@ class TrafficFine extends BaseModel
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare("SELECT rf.*, r.client_id, r.vehicle_id, c.nome_completo AS cliente_nome, v.nome AS veiculo_nome, v.placa,
+            CASE
+                WHEN rf.status = 'pendente' AND rf.data_vencimento < CURDATE() THEN 'vencida'
+                ELSE rf.status
+            END AS status_exibicao,
             fe.id AS financial_entry_id
             FROM rental_fines rf
             JOIN rentals r ON r.id = rf.rental_id
@@ -187,6 +215,7 @@ class TrafficFine extends BaseModel
             data_hora_multa DATETIME NOT NULL,
             data_vencimento DATE NOT NULL,
             observacoes TEXT,
+            status ENUM('pendente','paga','vencida','cancelada') NOT NULL DEFAULT 'pendente',
             gerar_despesa_financeiro TINYINT(1) NOT NULL DEFAULT 0,
             comprovante_path VARCHAR(255) DEFAULT NULL,
             comprovante_nome_original VARCHAR(255) DEFAULT NULL,
@@ -201,6 +230,7 @@ class TrafficFine extends BaseModel
     {
         $columns = [
             'observacoes' => 'ALTER TABLE rental_fines ADD COLUMN observacoes TEXT',
+            'status' => "ALTER TABLE rental_fines ADD COLUMN status ENUM('pendente','paga','vencida','cancelada') NOT NULL DEFAULT 'pendente'",
             'comprovante_path' => 'ALTER TABLE rental_fines ADD COLUMN comprovante_path VARCHAR(255) DEFAULT NULL',
             'comprovante_nome_original' => 'ALTER TABLE rental_fines ADD COLUMN comprovante_nome_original VARCHAR(255) DEFAULT NULL',
             'comprovante_mime_type' => 'ALTER TABLE rental_fines ADD COLUMN comprovante_mime_type VARCHAR(120) DEFAULT NULL',

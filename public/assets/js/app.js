@@ -190,7 +190,7 @@ function openFineModal(fine = null) {
   const id = document.getElementById('fine_id');
   if (id) id.value = fine?.id || '';
 
-  const fields = ['rental_id', 'auto_infracao', 'local_infracao', 'valor', 'data_hora_multa', 'data_vencimento', 'observacoes'];
+  const fields = ['rental_id', 'auto_infracao', 'local_infracao', 'valor', 'data_hora_multa', 'data_vencimento', 'status', 'observacoes'];
   fields.forEach((field) => {
     const el = document.getElementById('fine_' + field);
     if (!el) return;
@@ -210,6 +210,10 @@ function openFineModal(fine = null) {
     const rentalSelect = document.getElementById('fine_rental_id');
     if (preset > 0 && rentalSelect) {
       rentalSelect.value = String(preset);
+    }
+    const statusSelect = document.getElementById('fine_status');
+    if (statusSelect) {
+      statusSelect.value = 'pendente';
     }
   }
 }
@@ -243,8 +247,11 @@ function openFineModalFromElement(element) {
 }
 
 function openFineView(fine) {
+  const statusValue = fine.status_exibicao || fine.status || 'pendente';
+  const statusLabel = (window.fineStatusLabels && window.fineStatusLabels[statusValue]) || statusValue;
   const map = {
     rental: `#${fine.rental_id}`,
+    status: statusLabel,
     financial: fine.financial_entry_id ? 'Gerada no financeiro' : 'Não gerada',
     cliente: fine.cliente_nome || '-',
     veiculo: `${fine.veiculo_nome || '-'} (${fine.placa || '-'})`,
