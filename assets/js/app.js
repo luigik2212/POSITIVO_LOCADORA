@@ -120,7 +120,8 @@ function fillFinalize(rental) {
 
 function openRentalView(rental) {
   const finesSummaryMap = window.rentalFinesSummaryMap || {};
-  const fineSummary = finesSummaryMap[rental.id] || null;
+  const rentalId = Number(rental?.id || 0);
+  const fineSummary = finesSummaryMap[rentalId] || finesSummaryMap[String(rentalId)] || null;
   const qtdMultas = fineSummary ? Number(fineSummary.qtd || 0) : Number(rental.total_multas_qtd || 0);
   const valorMultas = fineSummary ? Number(fineSummary.valor_total || 0) : Number(rental.total_multas_valor || 0);
 
@@ -182,7 +183,9 @@ function openRentalView(rental) {
 function openFineModal(fine = null) {
   const form = document.getElementById('fineForm');
   if (!form) return;
+  const title = document.getElementById('fineModalTitle');
   form.action = fine ? withBase('/fines/update') : withBase('/fines/store');
+  if (title) title.textContent = fine ? 'Editar multa' : 'Cadastro de multa';
 
   const id = document.getElementById('fine_id');
   if (id) id.value = fine?.id || '';
@@ -214,8 +217,7 @@ function openFineModal(fine = null) {
 function parseFineFromElement(element) {
   if (!element || !element.dataset || !element.dataset.fine) return null;
   try {
-    const decoded = window.atob(element.dataset.fine);
-    return JSON.parse(decoded);
+    return JSON.parse(element.dataset.fine);
   } catch (error) {
     return null;
   }
