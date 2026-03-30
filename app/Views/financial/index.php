@@ -53,7 +53,6 @@
           <option value="nao_pago" <?= ($e['pagamento_status'] ?? 'nao_pago') === 'nao_pago' ? 'selected' : '' ?>>Não pago</option>
           <option value="pago" <?= ($e['pagamento_status'] ?? '') === 'pago' ? 'selected' : '' ?>>Pago</option>
         </select>
-        <?php if ($isOverdue): ?><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Vencida</span><?php endif; ?>
       </form>
     </td>
     <td><?= esc(trim(((string)($e['veiculo_nome'] ?? '')) . (!empty($e['veiculo_placa']) ? ' (' . $e['veiculo_placa'] . ')' : ''))) ?></td>
