@@ -30,6 +30,9 @@
 <div class="col-md-4"><strong>Financeiro total:</strong> <span id="view_fin_total"></span></div>
 <div class="col-md-4"><strong>Financeiro pago:</strong> <span id="view_fin_pago"></span></div>
 <div class="col-md-4"><strong>Financeiro pendente:</strong> <span id="view_fin_pendente"></span></div>
+<div class="col-md-6"><strong>Multas:</strong> <span id="view_multas_qtd">0</span></div>
+<div class="col-md-6"><strong>Valor total de multas:</strong> <span id="view_multas_total">R$ 0,00</span></div>
+<div class="col-12"><a class="btn btn-outline-primary btn-sm" id="view_manage_fines_link" href="<?= url('/fines') ?>">Gerenciar multas</a></div>
 <div class="col-12"><strong>Observações:</strong> <span id="view_obs"></span></div>
 <div class="col-12 d-none" id="view_actions_wrap">
   <div class="border rounded p-2 d-flex gap-2">
@@ -71,4 +74,7 @@
 <div class="col-12"><label class="form-label">Devolução - observações</label><textarea class="form-control" name="checklist_devolucao_observacoes"></textarea></div>
 <div class="col-12"><label class="form-label">Anexos devolução</label><input type="file" class="form-control" name="anexos_devolucao[]" multiple accept="image/*,video/*"></div>
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-success">Finalizar</button></div></form></div></div></div>
+<script>
+  window.rentalFinesSummaryMap = <?= json_encode($rentalFinesSummary ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+</script>
 <?php require __DIR__ . '/../partials/footer.php'; ?>

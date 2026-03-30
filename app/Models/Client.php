@@ -44,4 +44,34 @@ class Client extends BaseModel
     {
         return (int)$this->db->query('SELECT COUNT(*) FROM clients')->fetchColumn();
     }
+
+    public function paginate(?string $search, int $page, int $perPage): array
+    {
+        $where = ' WHERE 1=1';
+        $params = [];
+
+        if ($search) {
+            $where .= ' AND (nome_completo LIKE :search OR cpf LIKE :search OR telefone LIKE :search)';
+            $params['search'] = "%{$search}%";
+        }
+
+        $countStmt = $this->db->prepare('SELECT COUNT(*) FROM clients' . $where);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        $offset = max(0, ($page - 1) * $perPage);
+        $sql = 'SELECT * FROM clients' . $where . ' ORDER BY id DESC LIMIT :limit OFFSET :offset';
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'data' => $stmt->fetchAll(),
+            'total' => $total,
+        ];
+    }
 }

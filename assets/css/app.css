@@ -13,3 +13,8 @@ body { background: #f5f7fb; }
 .modal-footer { border-top: 1px solid #eef1f6; }
 .table-actions-cell { min-width: 160px; }
 .financial-due-soon { border-left: 4px solid #dc3545; background: #fff5f5; }
+.notifications-menu { width: min(430px, 92vw); max-height: 420px; overflow-y: auto; }
+.notification-item { white-space: normal; }
+.notification-unread { border-left: 4px solid #0d6efd; background: #eef5ff; }
+.notifications-load-more { font-size: .875rem; text-decoration: none; }
+.notifications-load-more:hover { text-decoration: underline; }

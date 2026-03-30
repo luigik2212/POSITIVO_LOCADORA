@@ -13,15 +13,45 @@ class VehicleController extends Controller
     public function index(): void
     {
         $vehicleModel = new Vehicle();
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $search = $_GET['search'] ?? null;
+        $status = $_GET['status'] ?? null;
+        $pagination = $vehicleModel->paginate($search, $status, $page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $vehicleModel->paginate($search, $status, $page, $perPage);
+        }
+
         $this->view('vehicles/index', [
-            'vehicles' => $vehicleModel->all($_GET['search'] ?? null, $_GET['status'] ?? null),
+            'vehicles' => $pagination['data'],
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'queryParams' => [
+                'search' => $search,
+                'status' => $status,
+            ],
         ]);
     }
 
     public function mileageHistory(): void
     {
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $historyModel = new MileageHistory();
+        $pagination = $historyModel->paginate($page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $historyModel->paginate($page, $perPage);
+        }
+
         $this->view('vehicles/mileage-history', [
-            'history' => (new MileageHistory())->all(),
+            'history' => $pagination['data'],
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'queryParams' => [],
         ]);
     }
 
@@ -115,6 +145,7 @@ class VehicleController extends Controller
             'renavam' => trim((string)($_POST['renavam'] ?? '')),
             'cor' => trim((string)($_POST['cor'] ?? '')),
             'quilometragem_atual' => (int)($_POST['quilometragem_atual'] ?? 0),
+            'proxima_revisao_km' => $this->nullableInt($_POST['proxima_revisao_km'] ?? null),
             'categoria' => trim((string)($_POST['categoria'] ?? '')),
             'valor_diaria' => (float)($_POST['valor_diaria'] ?? 0),
             'valor_semanal' => (float)($_POST['valor_semanal'] ?? 0),
@@ -143,5 +174,19 @@ class VehicleController extends Controller
         }
 
         return true;
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $raw = trim((string)$value);
+        if ($raw === '' || !ctype_digit($raw)) {
+            return null;
+        }
+
+        return (int)$raw;
     }
 }

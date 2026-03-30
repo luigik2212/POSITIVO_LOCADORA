@@ -6,6 +6,8 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\FinancialEntry;
+use App\Models\MileageHistory;
+use App\Models\NotificationState;
 use App\Models\Vehicle;
 
 class FinancialController extends Controller
@@ -20,11 +22,20 @@ class FinancialController extends Controller
         $to = $_GET['to'] ?? date('Y-m-t');
         $tab = ($_GET['tab'] ?? 'payable') === 'receivable' ? 'receivable' : 'payable';
         $tipo = $tab === 'receivable' ? 'receita' : 'despesa';
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
 
-        $entries = $financial->all($from, $to, $tipo, true);
+        $pagination = $financial->paginate($from, $to, $tipo, true, $page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $financial->paginate($from, $to, $tipo, true, $page, $perPage);
+        }
+        $entries = $pagination['data'];
+        $allEntries = $financial->all($from, $to, $tipo, true);
         $vehicles = (new Vehicle())->all();
         $totals = ['total' => 0.0, 'paid' => 0.0];
-        foreach ($entries as $entry) {
+        foreach ($allEntries as $entry) {
             $value = (float)$entry['valor'];
             $totals['total'] += $value;
             if (($entry['pagamento_status'] ?? 'nao_pago') === 'pago') {
@@ -32,7 +43,13 @@ class FinancialController extends Controller
             }
         }
 
-        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'vehicles'));
+        $currentPage = $page;
+        $queryParams = [
+            'tab' => $tab,
+            'from' => $from,
+            'to' => $to,
+        ];
+        $this->view('financial/index', compact('entries', 'totals', 'from', 'to', 'tab', 'vehicles', 'currentPage', 'totalPages', 'queryParams'));
     }
 
     public function store(): void
@@ -65,9 +82,111 @@ class FinancialController extends Controller
     public function updatePaymentStatus(): void
     {
         validateCsrf();
+        $entryId = (int)($_POST['id'] ?? 0);
         $status = ($_POST['pagamento_status'] ?? 'nao_pago') === 'pago' ? 'pago' : 'nao_pago';
-        (new FinancialEntry())->updatePaymentStatus((int)($_POST['id'] ?? 0), $status);
+
+        $financialModel = new FinancialEntry();
+        $entry = $financialModel->find($entryId);
+        if (!$entry) {
+            flash('error', 'Lançamento financeiro não encontrado.');
+            $this->redirectWithFilters();
+            return;
+        }
+
+        if ($status === 'pago' && $this->isWeeklyReceivableEntry($entry)) {
+            $rawKm = trim((string)($_POST['quilometragem_atual'] ?? ''));
+            $vehicleId = (int)($entry['vehicle_id'] ?? 0);
+            $vehicle = $vehicleId > 0 ? (new Vehicle())->find($vehicleId) : null;
+            if (!$vehicle) {
+                flash('error', 'Não foi possível vincular a cobrança a um veículo para atualizar o KM.');
+                $this->redirectWithFilters();
+                return;
+            }
+
+            $allowPendingKm = ($_POST['permitir_preencher_km_depois'] ?? '0') === '1';
+            if ($rawKm === '' || !ctype_digit($rawKm)) {
+                if (!$allowPendingKm) {
+                    flash('error', 'Informe a quilometragem atual para baixar a cobrança semanal.');
+                    $this->redirectWithFilters();
+                    return;
+                }
+
+                $financialModel->markPendingMileageFill($entryId, true);
+            } else {
+                $kmNovo = (int)$rawKm;
+                $kmAtual = (int)($vehicle['quilometragem_atual'] ?? 0);
+                if ($kmNovo < $kmAtual) {
+                    flash('error', 'KM informado é menor que o KM atual do veículo.');
+                    $this->redirectWithFilters();
+                    return;
+                }
+
+                if ($kmNovo > $kmAtual) {
+                    $vehicleModel = new Vehicle();
+                    $vehicleModel->updateMileage($vehicleId, $kmNovo);
+                    (new MileageHistory())->create($vehicleId, $kmAtual, $kmNovo, 'baixa_pagamento_semanal');
+                }
+                $financialModel->markPendingMileageFill($entryId, false);
+                $this->resolvePendingMileageNotification($entryId);
+            }
+        }
+
+        if ($status !== 'pago' && $this->isWeeklyReceivableEntry($entry)) {
+            $financialModel->markPendingMileageFill($entryId, false);
+            $this->resolvePendingMileageNotification($entryId);
+        }
+
+        $financialModel->updatePaymentStatus($entryId, $status);
         flash('success', 'Status de pagamento atualizado.');
+        $this->redirectWithFilters();
+    }
+
+    public function fillMissingMileage(): void
+    {
+        validateCsrf();
+        $entryId = (int)($_POST['id'] ?? 0);
+        $rawKm = trim((string)($_POST['quilometragem_atual'] ?? ''));
+
+        if ($entryId <= 0 || $rawKm === '' || !ctype_digit($rawKm)) {
+            flash('error', 'Informe um KM válido para concluir o preenchimento pendente.');
+            $this->redirectWithFilters();
+            return;
+        }
+
+        $financialModel = new FinancialEntry();
+        $entry = $financialModel->find($entryId);
+        if (!$entry || !$this->isWeeklyReceivableEntry($entry)) {
+            flash('error', 'Lançamento inválido para preenchimento de KM.');
+            $this->redirectWithFilters();
+            return;
+        }
+
+        $vehicleId = (int)($entry['vehicle_id'] ?? 0);
+        $vehicle = $vehicleId > 0 ? (new Vehicle())->find($vehicleId) : null;
+        if (!$vehicle) {
+            flash('error', 'Veículo não encontrado para atualizar KM.');
+            $this->redirectWithFilters();
+            return;
+        }
+
+        $kmNovo = (int)$rawKm;
+        $kmAtual = (int)($vehicle['quilometragem_atual'] ?? 0);
+        if ($kmNovo < $kmAtual) {
+            flash('error', 'KM informado é menor que o KM atual do veículo.');
+            $this->redirectWithFilters();
+            return;
+        }
+
+        if ($kmNovo > $kmAtual) {
+            $vehicleModel = new Vehicle();
+            $vehicleModel->updateMileage($vehicleId, $kmNovo);
+            (new MileageHistory())->create($vehicleId, $kmAtual, $kmNovo, 'baixa_pagamento_semanal');
+        }
+
+        $financialModel->markPendingMileageFill($entryId, false);
+        $this->resolvePendingMileageNotification($entryId);
+
+        flash('success', 'KM do veículo preenchido com sucesso.');
         $this->redirectWithFilters();
     }
 
@@ -87,6 +206,14 @@ class FinancialController extends Controller
             'from' => $from,
             'to' => $to,
         ]);
+    }
+
+
+    private function isWeeklyReceivableEntry(array $entry): bool
+    {
+        return ($entry['tipo'] ?? '') === 'receita'
+            && ($entry['categoria'] ?? '') === 'locacao_semanal'
+            && ($entry['rental_tipo_cobranca'] ?? '') === 'semanal';
     }
 
     private function payload(): array
@@ -124,5 +251,16 @@ class FinancialController extends Controller
             'to' => $to,
         ]);
         $this->redirect('/financial?' . $query);
+    }
+
+    private function resolvePendingMileageNotification(int $entryId): void
+    {
+        $user = authUser();
+        if (!$user) {
+            return;
+        }
+
+        $key = 'pending-km-entry-' . $entryId;
+        (new NotificationState())->markResolved((int)$user['id'], $key);
     }
 }

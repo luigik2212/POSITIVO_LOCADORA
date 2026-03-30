@@ -12,12 +12,74 @@ function formatDateBr(value) {
   return dt.toLocaleDateString('pt-BR');
 }
 
+function formatMoneyBr(value) {
+  const amount = Number(value || 0);
+  return `R$ ${amount.toFixed(2).replace('.', ',')}`;
+}
+
+
+function handlePaymentStatusChange(event, select) {
+  const form = select?.form;
+  if (!form) return;
+
+  const nextStatus = select.value;
+  const previousStatus = Array.from(select.options).find((option) => option.defaultSelected)?.value || 'nao_pago';
+  const requiresKm = select.dataset.requiresKm === '1';
+
+  if (nextStatus === 'pago' && requiresKm) {
+    event.preventDefault();
+    const modalEl = document.getElementById('weeklyMileageModal');
+    const input = document.getElementById('weeklyMileageInput');
+    const hint = document.getElementById('weeklyMileageHint');
+    const vehicleText = document.getElementById('weeklyMileageVehicle');
+    const entryIdField = document.getElementById('weeklyMileageEntryId');
+    if (!modalEl || !input || !entryIdField) {
+      form.submit();
+      return;
+    }
+
+    const currentKm = Number(select.dataset.currentKm || 0);
+    const vehicleLabel = select.dataset.vehicleLabel || '';
+    const idField = form.querySelector('input[name="id"]');
+    entryIdField.value = idField ? idField.value : '';
+    input.min = String(Math.max(currentKm, 0));
+    input.value = String(Math.max(currentKm, 0));
+    if (hint) hint.textContent = `KM atual cadastrado: ${currentKm}`;
+    if (vehicleText) vehicleText.textContent = vehicleLabel ? `Veículo: ${vehicleLabel}` : '';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      select.value = previousStatus;
+    }, { once: true });
+    return;
+  }
+
+  form.submit();
+}
+
+function openPendingMileageModal(payload = null) {
+  const input = document.getElementById('pendingMileageInput');
+  const hint = document.getElementById('pendingMileageHint');
+  const vehicleText = document.getElementById('pendingMileageVehicle');
+  const entryIdField = document.getElementById('pendingMileageEntryId');
+  if (!input || !entryIdField) return;
+
+  const currentKm = Number(payload?.current_km || 0);
+  entryIdField.value = payload?.id || '';
+  input.min = String(Math.max(currentKm, 0));
+  input.value = String(Math.max(currentKm, 0));
+  if (hint) hint.textContent = `KM atual cadastrado: ${currentKm}`;
+  if (vehicleText) vehicleText.textContent = payload?.vehicle_label ? `Veículo: ${payload.vehicle_label}` : '';
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
   form.action = vehicle ? withBase('/vehicles/update') : withBase('/vehicles/store');
   document.getElementById('vehicle_id').value = vehicle?.id || '';
-  ['nome','marca','modelo','ano','placa','renavam','cor','quilometragem_atual','categoria','valor_diaria','valor_semanal','valor_mensal','status','observacoes'].forEach(k => {
+  ['nome','marca','modelo','ano','placa','renavam','cor','quilometragem_atual','proxima_revisao_km','categoria','valor_diaria','valor_semanal','valor_mensal','status','observacoes'].forEach(k => {
     const el = document.getElementById('v_' + k);
     if (el) el.value = vehicle?.[k] ?? (k === 'status' ? 'disponivel' : '');
   });
@@ -111,18 +173,15 @@ function toggleRecurring() {
 function fillFinalize(rental) {
   const field = document.getElementById('finalize_id');
   if (field) field.value = rental.id;
-  const dateField = document.querySelector('#finalizeModal input[name="data_real_termino"]');
-  if (dateField) {
-    const today = new Date().toISOString().slice(0, 10);
-    dateField.value = today;
-  }
-  const kmField = document.querySelector('#finalizeModal input[name="quilometragem_retorno"]');
-  if (kmField) kmField.value = rental.quilometragem_retorno || rental.quilometragem_saida || '';
-  const finalValueField = document.querySelector('#finalizeModal input[name="valor_total_final"]');
-  if (finalValueField) finalValueField.value = rental.valor_total_final || rental.valor_total_previsto || '';
 }
 
 function openRentalView(rental) {
+  const finesSummaryMap = window.rentalFinesSummaryMap || {};
+  const rentalId = Number(rental?.id || 0);
+  const fineSummary = finesSummaryMap[rentalId] || finesSummaryMap[String(rentalId)] || null;
+  const qtdMultas = fineSummary ? Number(fineSummary.qtd || 0) : Number(rental.total_multas_qtd || 0);
+  const valorMultas = fineSummary ? Number(fineSummary.valor_total || 0) : Number(rental.total_multas_valor || 0);
+
   const map = {
     cliente: rental.cliente_nome,
     veiculo: `${rental.veiculo_nome} (${rental.placa})`,
@@ -131,14 +190,16 @@ function openRentalView(rental) {
     tempo: rental.tempo_contrato,
     inicio: formatDateBr(rental.data_inicio),
     fim: formatDateBr(rental.data_prevista_termino),
-    fim_real: formatDateBr(rental.data_real_termino),
     km_saida: rental.quilometragem_saida,
     km_retorno: rental.quilometragem_retorno || '-',
-    valor: `R$ ${Number(rental.valor_total_previsto || 0).toFixed(2)}`,
-    caucao: `R$ ${Number(rental.caucao || 0).toFixed(2)}`,
-    fin_total: `R$ ${Number(rental.financeiro_total_lancamentos || 0).toFixed(2)}`,
-    fin_pago: `R$ ${Number(rental.financeiro_total_pago || 0).toFixed(2)}`,
-    fin_pendente: `R$ ${Number(rental.financeiro_total_pendente || 0).toFixed(2)}`,
+    valor: formatMoneyBr(rental.valor_total_previsto || 0),
+    caucao: formatMoneyBr(rental.caucao || 0),
+    fim_real: rental.data_real_termino ? formatDateBr(rental.data_real_termino) : '-',
+    fin_total: formatMoneyBr(rental.financeiro_total_lancamentos || 0),
+    fin_pago: formatMoneyBr(rental.financeiro_total_pago || 0),
+    fin_pendente: formatMoneyBr(rental.financeiro_total_pendente || 0),
+    multas_qtd: qtdMultas,
+    multas_total: formatMoneyBr(valorMultas),
     obs: rental.observacoes || '-',
   };
 
@@ -147,16 +208,136 @@ function openRentalView(rental) {
     if (el) el.textContent = value;
   });
 
+  if (typeof window.fetch === 'function') {
+    fetch(withBase(`/fines/summary?rental_id=${rental.id}`))
+      .then((response) => response.ok ? response.json() : null)
+      .then((summary) => {
+        if (!summary) return;
+        const qtd = document.getElementById('view_multas_qtd');
+        const total = document.getElementById('view_multas_total');
+        if (qtd) qtd.textContent = String(Number(summary.qtd || 0));
+        if (total) total.textContent = formatMoneyBr(summary.valor_total || 0);
+      })
+      .catch(() => {});
+  }
+
   const actionsWrap = document.getElementById('view_actions_wrap');
   const cancelId = document.getElementById('view_cancel_id');
   const devolverBtn = document.getElementById('view_devolver_btn');
+  const manageFinesLink = document.getElementById('view_manage_fines_link');
   if (cancelId) cancelId.value = rental.id;
   if (devolverBtn) {
     devolverBtn.onclick = () => fillFinalize(rental);
   }
+  if (manageFinesLink) {
+    manageFinesLink.href = withBase(`/fines?rental_id=${rental.id}`);
+  }
   if (actionsWrap) {
     actionsWrap.classList.toggle('d-none', rental.status !== 'ativa');
   }
+}
+
+function openFineModal(fine = null) {
+  const form = document.getElementById('fineForm');
+  if (!form) return;
+  const title = document.getElementById('fineModalTitle');
+  form.action = fine ? withBase('/fines/update') : withBase('/fines/store');
+  if (title) title.textContent = fine ? 'Editar multa' : 'Cadastro de multa';
+
+  const id = document.getElementById('fine_id');
+  if (id) id.value = fine?.id || '';
+
+  const fields = ['rental_id', 'auto_infracao', 'local_infracao', 'valor', 'data_hora_multa', 'data_vencimento', 'observacoes'];
+  fields.forEach((field) => {
+    const el = document.getElementById('fine_' + field);
+    if (!el) return;
+    if (field === 'data_hora_multa') {
+      const raw = fine?.[field] || '';
+      el.value = raw ? String(raw).replace(' ', 'T').slice(0, 16) : '';
+      return;
+    }
+    el.value = fine?.[field] ?? '';
+  });
+
+  const checkbox = document.getElementById('fine_gerar_despesa_financeiro');
+  if (checkbox) checkbox.checked = Boolean(Number(fine?.gerar_despesa_financeiro || 0));
+
+  if (!fine) {
+    const preset = Number(window.finePresetRentalId || 0);
+    const rentalSelect = document.getElementById('fine_rental_id');
+    if (preset > 0 && rentalSelect) {
+      rentalSelect.value = String(preset);
+    }
+  }
+}
+
+function parseFineFromElement(element) {
+  if (!element || !element.dataset || !element.dataset.fine) return null;
+
+  const raw = String(element.dataset.fine || '').trim();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    // fallback
+  }
+
+  try {
+
+    const decoded = window.atob(raw);
+    const normalized = decodeURIComponent(Array.from(decoded)
+      .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+      .join(''));
+    return JSON.parse(normalized);
+
+  } catch (error) {
+    return null;
+  }
+}
+
+function openFineModalFromElement(element) {
+  openFineModal(parseFineFromElement(element));
+}
+
+function openFineView(fine) {
+  const map = {
+    rental: `#${fine.rental_id}`,
+    financial: fine.financial_entry_id ? 'Gerada no financeiro' : 'Não gerada',
+    cliente: fine.cliente_nome || '-',
+    veiculo: `${fine.veiculo_nome || '-'} (${fine.placa || '-'})`,
+    auto: fine.auto_infracao || '-',
+    local: fine.local_infracao || '-',
+    valor: formatMoneyBr(fine.valor || 0),
+    vencimento: formatDateBr(fine.data_vencimento),
+    obs: fine.observacoes || '-',
+  };
+
+  Object.entries(map).forEach(([key, value]) => {
+    const el = document.getElementById('fine_view_' + key);
+    if (el) el.textContent = value;
+  });
+}
+
+function openFineViewFromElement(element) {
+  const fine = parseFineFromElement(element);
+  if (!fine) return;
+  openFineView(fine);
+}
+
+function openFineAttachmentModal(fine) {
+  const id = document.getElementById('fine_attachment_id');
+  const context = document.getElementById('fine_attachment_context');
+  if (id) id.value = fine.id || '';
+  if (context) {
+    context.textContent = `Multa #${fine.id} | Locação #${fine.rental_id} | Auto ${fine.auto_infracao || '-'}`;
+  }
+}
+
+function openFineAttachmentModalFromElement(element) {
+  const fine = parseFineFromElement(element);
+  if (!fine) return;
+  openFineAttachmentModal(fine);
 }
 
 function updatePricePreview() {
@@ -174,6 +355,14 @@ function updatePricePreview() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const pendingEntry = Number(window.pendingMileageEntry || 0);
+  if (pendingEntry > 0) {
+    const trigger = document.querySelector(`button[data-pending-km-entry="${pendingEntry}"]`);
+    if (trigger && typeof trigger.click === 'function') {
+      trigger.click();
+    }
+  }
+
   const vehicleSearch = document.getElementById('f_vehicle_search');
   const vehicleId = document.getElementById('f_vehicle_id');
   if (vehicleSearch && vehicleId) {
@@ -212,6 +401,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+  }
+
+
+  const weeklyMileageForm = document.getElementById('weeklyMileageForm');
+  if (weeklyMileageForm) {
+    weeklyMileageForm.addEventListener('submit', (event) => {
+      const input = document.getElementById('weeklyMileageInput');
+      const minKm = Number(input?.min || 0);
+      const valueKm = Number(input?.value || 0);
+      if (!input || !input.value || valueKm < minKm) {
+        event.preventDefault();
+        window.alert('Informe um KM válido (igual ou maior ao KM atual).');
+        input?.focus();
+      }
+    });
   }
 
   ['vehicleSelect', 'tipoCobranca', 'tempoContrato'].forEach(id => {
