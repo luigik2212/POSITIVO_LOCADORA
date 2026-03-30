@@ -8,6 +8,7 @@
 <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#clientModal" onclick='openClientModal(<?= json_encode($clientJson, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Editar</button>
 <a class="btn btn-sm btn-info" href="<?= url('/clients') ?>?client_id=<?= $c['id'] ?>">Histórico</a>
 </td></tr><?php endforeach; ?></tbody></table>
+<?php require __DIR__ . '/../partials/pagination.php'; ?>
 
 <?php if ($selectedClient): ?>
 <div class="card"><div class="card-header">Histórico de locações: <?= esc($selectedClient['nome_completo']) ?></div><div class="table-responsive"><table class="table"><thead><tr><th>Veículo</th><th>Início</th><th>Término</th><th>Status</th></tr></thead><tbody><?php foreach($history as $h): ?><tr><td><?= esc($h['veiculo_nome']) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$h['data_inicio']))) ?></td><td><?= esc(date('d/m/Y', strtotime((string)$h['data_prevista_termino']))) ?></td><td><?= esc($h['status']) ?></td></tr><?php endforeach; ?></tbody></table></div></div>

@@ -23,6 +23,7 @@ CREATE TABLE vehicles (
   renavam VARCHAR(20) DEFAULT NULL,
   cor VARCHAR(40) DEFAULT NULL,
   quilometragem_atual INT NOT NULL DEFAULT 0,
+  proxima_revisao_km INT DEFAULT NULL,
   categoria VARCHAR(60) DEFAULT NULL,
   valor_diaria DECIMAL(10,2) NOT NULL DEFAULT 0,
   valor_semanal DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -116,7 +117,7 @@ CREATE TABLE vehicle_mileage_history (
   vehicle_id INT NOT NULL,
   km_anterior INT NOT NULL,
   km_novo INT NOT NULL,
-  origem_atualizacao ENUM('manutencao','devolucao','edicao_manual') NOT NULL,
+  origem_atualizacao ENUM('manutencao','devolucao','edicao_manual','baixa_pagamento_semanal') NOT NULL,
   data_atualizacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
 );
@@ -150,11 +151,44 @@ CREATE TABLE financial_entries (
   referencia_data DATE DEFAULT NULL,
   origem_automatica TINYINT(1) NOT NULL DEFAULT 0,
   parent_entry_id INT DEFAULT NULL,
+  fine_id INT DEFAULT NULL,
+  km_pendente_preenchimento TINYINT(1) NOT NULL DEFAULT 0,
   data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (rental_id) REFERENCES rentals(id),
   FOREIGN KEY (maintenance_id) REFERENCES maintenances(id),
   FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
-  FOREIGN KEY (client_id) REFERENCES clients(id)
+  FOREIGN KEY (client_id) REFERENCES clients(id),
+  UNIQUE KEY uniq_financial_fine (fine_id)
+);
+
+CREATE TABLE notification_states (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  notification_key VARCHAR(190) NOT NULL,
+  viewed_at DATETIME DEFAULT NULL,
+  resolved_at DATETIME DEFAULT NULL,
+  data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_notification_user_key (user_id, notification_key),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE rental_fines (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  rental_id INT NOT NULL,
+  auto_infracao VARCHAR(100) NOT NULL,
+  local_infracao VARCHAR(180) NOT NULL,
+  valor DECIMAL(10,2) NOT NULL,
+  data_hora_multa DATETIME NOT NULL,
+  data_vencimento DATE NOT NULL,
+  observacoes TEXT,
+  status ENUM('pendente','paga','vencida','cancelada') NOT NULL DEFAULT 'pendente',
+  gerar_despesa_financeiro TINYINT(1) NOT NULL DEFAULT 0,
+  comprovante_path VARCHAR(255) DEFAULT NULL,
+  comprovante_nome_original VARCHAR(255) DEFAULT NULL,
+  comprovante_mime_type VARCHAR(120) DEFAULT NULL,
+  comprovante_tamanho_bytes INT DEFAULT NULL,
+  data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (rental_id) REFERENCES rentals(id)
 );
 
 INSERT INTO users (nome, login, email, senha, perfil, status, primeiro_login)

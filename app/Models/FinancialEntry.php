@@ -18,7 +18,7 @@ class FinancialEntry extends BaseModel
 
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO financial_entries (tipo, categoria, descricao, valor, data_movimentacao, rental_id, maintenance_id, vehicle_id, client_id, pagamento_status, recorrente, recorrencia_periodo, recorrencia_ativa, referencia_data, origem_automatica) VALUES (:tipo,:categoria,:descricao,:valor,:data_movimentacao,:rental_id,:maintenance_id,:vehicle_id,:client_id,:pagamento_status,:recorrente,:recorrencia_periodo,:recorrencia_ativa,:referencia_data,:origem_automatica)');
+        $stmt = $this->db->prepare('INSERT INTO financial_entries (tipo, categoria, descricao, valor, data_movimentacao, rental_id, maintenance_id, vehicle_id, client_id, pagamento_status, recorrente, recorrencia_periodo, recorrencia_ativa, referencia_data, origem_automatica, fine_id) VALUES (:tipo,:categoria,:descricao,:valor,:data_movimentacao,:rental_id,:maintenance_id,:vehicle_id,:client_id,:pagamento_status,:recorrente,:recorrencia_periodo,:recorrencia_ativa,:referencia_data,:origem_automatica,:fine_id)');
         $stmt->execute([
             ...$data,
             'pagamento_status' => $data['pagamento_status'] ?? 'nao_pago',
@@ -27,6 +27,7 @@ class FinancialEntry extends BaseModel
             'recorrencia_ativa' => !empty($data['recorrente']) ? 1 : 0,
             'referencia_data' => $data['referencia_data'] ?? $data['data_movimentacao'],
             'origem_automatica' => !empty($data['origem_automatica']) ? 1 : 0,
+            'fine_id' => $data['fine_id'] ?? null,
         ]);
 
         return (int)$this->db->lastInsertId();
@@ -64,9 +65,31 @@ class FinancialEntry extends BaseModel
         $stmt->execute(['id' => $id, 'status' => $status]);
     }
 
+    public function markPendingMileageFill(int $id, bool $pending): void
+    {
+        $stmt = $this->db->prepare('UPDATE financial_entries SET km_pendente_preenchimento = :pending WHERE id = :id');
+        $stmt->execute([
+            'id' => $id,
+            'pending' => $pending ? 1 : 0,
+        ]);
+    }
+
+
+    public function find(int $id): ?array
+    {
+        $stmt = $this->db->prepare("SELECT fe.*, r.tipo_cobranca AS rental_tipo_cobranca
+            FROM financial_entries fe
+            LEFT JOIN rentals r ON r.id = fe.rental_id
+            WHERE fe.id = :id
+            LIMIT 1");
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->fetch() ?: null;
+    }
+
     public function all(?string $from = null, ?string $to = null, ?string $tipo = null, bool $dueDateAscending = false): array
     {
-        $sql = 'SELECT fe.*, v.nome as veiculo_nome, v.placa as veiculo_placa, c.nome_completo as cliente_nome FROM financial_entries fe
+        $sql = 'SELECT fe.*, v.nome as veiculo_nome, v.placa as veiculo_placa, v.quilometragem_atual as veiculo_km_atual, c.nome_completo as cliente_nome FROM financial_entries fe
                 LEFT JOIN vehicles v ON v.id = fe.vehicle_id
                 LEFT JOIN clients c ON c.id = fe.client_id
                 WHERE 1=1';
@@ -91,6 +114,48 @@ class FinancialEntry extends BaseModel
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function paginate(?string $from, ?string $to, ?string $tipo, bool $dueDateAscending, int $page, int $perPage): array
+    {
+        $where = ' WHERE 1=1';
+        $params = [];
+        if ($from) {
+            $where .= ' AND fe.data_movimentacao >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $where .= ' AND fe.data_movimentacao <= :to';
+            $params['to'] = $to;
+        }
+        if ($tipo) {
+            $where .= ' AND fe.tipo = :tipo';
+            $params['tipo'] = $tipo;
+        }
+
+        $countStmt = $this->db->prepare('SELECT COUNT(*) FROM financial_entries fe' . $where);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        $offset = max(0, ($page - 1) * $perPage);
+        $order = $dueDateAscending ? ' ORDER BY fe.data_movimentacao ASC, fe.id ASC' : ' ORDER BY fe.data_movimentacao DESC, fe.id DESC';
+        $sql = 'SELECT fe.*, v.nome as veiculo_nome, v.placa as veiculo_placa, v.quilometragem_atual as veiculo_km_atual, c.nome_completo as cliente_nome
+                FROM financial_entries fe
+                LEFT JOIN vehicles v ON v.id = fe.vehicle_id
+                LEFT JOIN clients c ON c.id = fe.client_id' . $where . $order . '
+                LIMIT :limit OFFSET :offset';
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'data' => $stmt->fetchAll(),
+            'total' => $total,
+        ];
     }
 
     public function upcomingDue(string $tipo, int $limit = 5): array
@@ -292,6 +357,55 @@ class FinancialEntry extends BaseModel
         ];
     }
 
+    public function existsByFineId(int $fineId): bool
+    {
+        $stmt = $this->db->prepare('SELECT id FROM financial_entries WHERE fine_id = :fine_id LIMIT 1');
+        $stmt->execute(['fine_id' => $fineId]);
+        return (bool)$stmt->fetch();
+    }
+
+    public function deleteByFineId(int $fineId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM financial_entries WHERE fine_id = :fine_id');
+        $stmt->execute(['fine_id' => $fineId]);
+    }
+
+    public function syncFineExpense(array $fine): void
+    {
+        $fineId = (int)$fine['id'];
+        $existing = $this->db->prepare('SELECT id FROM financial_entries WHERE fine_id = :fine_id LIMIT 1');
+        $existing->execute(['fine_id' => $fineId]);
+        $entry = $existing->fetch();
+
+        $payload = [
+            'descricao' => 'Multa da locação #' . (int)$fine['rental_id'] . ' - Auto ' . (string)$fine['auto_infracao'],
+            'valor' => (float)$fine['valor'],
+            'data_movimentacao' => (string)$fine['data_vencimento'],
+            'rental_id' => (int)$fine['rental_id'],
+            'vehicle_id' => (int)$fine['vehicle_id'],
+            'client_id' => (int)$fine['client_id'],
+            'fine_id' => $fineId,
+        ];
+
+        if ($entry) {
+            $stmt = $this->db->prepare("UPDATE financial_entries SET tipo='despesa', categoria='multa', descricao=:descricao, valor=:valor, data_movimentacao=:data_movimentacao, rental_id=:rental_id, vehicle_id=:vehicle_id, client_id=:client_id, fine_id=:fine_id, origem_automatica=1 WHERE id=:id");
+            $stmt->execute([
+                ...$payload,
+                'id' => (int)$entry['id'],
+            ]);
+            return;
+        }
+
+        $this->create([
+            'tipo' => 'despesa',
+            'categoria' => 'multa',
+            ...$payload,
+            'maintenance_id' => null,
+            'pagamento_status' => 'nao_pago',
+            'origem_automatica' => 1,
+        ]);
+    }
+
     public function report(?string $from = null, ?string $to = null): array
     {
         $entries = $this->all($from, $to, null);
@@ -398,6 +512,8 @@ class FinancialEntry extends BaseModel
             'referencia_data' => "ALTER TABLE financial_entries ADD COLUMN referencia_data DATE DEFAULT NULL",
             'origem_automatica' => "ALTER TABLE financial_entries ADD COLUMN origem_automatica TINYINT(1) NOT NULL DEFAULT 0",
             'parent_entry_id' => "ALTER TABLE financial_entries ADD COLUMN parent_entry_id INT DEFAULT NULL",
+            'fine_id' => "ALTER TABLE financial_entries ADD COLUMN fine_id INT DEFAULT NULL",
+            'km_pendente_preenchimento' => "ALTER TABLE financial_entries ADD COLUMN km_pendente_preenchimento TINYINT(1) NOT NULL DEFAULT 0",
         ];
 
         foreach ($columns as $column => $alter) {
@@ -406,6 +522,11 @@ class FinancialEntry extends BaseModel
             if (!$stmt->fetch()) {
                 $this->db->exec($alter);
             }
+        }
+
+        $indexCheck = $this->db->query("SHOW INDEX FROM financial_entries WHERE Key_name = 'uniq_financial_fine'")->fetch();
+        if (!$indexCheck) {
+            $this->db->exec('CREATE UNIQUE INDEX uniq_financial_fine ON financial_entries (fine_id)');
         }
     }
 }

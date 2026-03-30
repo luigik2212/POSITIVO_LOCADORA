@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\FinancialEntry;
 use App\Models\MileageHistory;
 use App\Models\Rental;
+use App\Models\TrafficFine;
 use App\Models\Vehicle;
 
 class RentalController extends Controller
@@ -19,6 +20,7 @@ class RentalController extends Controller
         $rentalModel = new Rental();
         $clientModel = new Client();
         $vehicleModel = new Vehicle();
+        $fineModel = new TrafficFine();
 
         $status = $_GET['status'] ?? 'ativa';
         $filters = [
@@ -30,11 +32,25 @@ class RentalController extends Controller
             'to' => $_GET['to'] ?? null,
         ];
 
+        $rentals = $rentalModel->all($filters);
+        $rentalIds = array_map(static fn (array $rental): int => (int)$rental['id'], $rentals);
+        $rentalFinesSummary = $fineModel->summaryByRentalIds($rentalIds);
+
+        foreach ($rentals as &$rental) {
+            $summary = $rentalFinesSummary[(int)$rental['id']] ?? null;
+            if ($summary !== null) {
+                $rental['total_multas_qtd'] = $summary['qtd'];
+                $rental['total_multas_valor'] = $summary['valor_total'];
+            }
+        }
+        unset($rental);
+
         $this->view('rentals/index', [
-            'rentals' => $rentalModel->all($filters),
+            'rentals' => $rentals,
             'clients' => $clientModel->all(),
             'vehicles' => $vehicleModel->available(),
             'allVehicles' => $vehicleModel->all(),
+            'rentalFinesSummary' => $rentalFinesSummary,
             'filters' => $filters,
         ]);
     }

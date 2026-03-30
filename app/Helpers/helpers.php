@@ -70,3 +70,17 @@ function esc(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
+
+function paginationUrl(int $page, array $params = []): string
+{
+    $query = $params;
+    $query['page'] = max(1, $page);
+    $queryString = http_build_query($query);
+
+    $path = strtok((string)($_SERVER['REQUEST_URI'] ?? ''), '?');
+    if (!$path) {
+        $path = '/';
+    }
+
+    return url($path) . ($queryString !== '' ? '?' . $queryString : '');
+}

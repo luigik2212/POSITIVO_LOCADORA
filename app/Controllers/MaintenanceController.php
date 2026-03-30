@@ -16,10 +16,25 @@ class MaintenanceController extends Controller
     {
         $maintenanceModel = new Maintenance();
         $vehicleModel = new Vehicle();
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $vehicleId = !empty($_GET['vehicle_id']) ? (int)$_GET['vehicle_id'] : null;
+        $pagination = $maintenanceModel->paginate($vehicleId, $page, $perPage);
+        $totalPages = max(1, (int)ceil(($pagination['total'] ?? 0) / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $pagination = $maintenanceModel->paginate($vehicleId, $page, $perPage);
+        }
+
         $this->view('maintenances/index', [
-            'maintenances' => $maintenanceModel->all(isset($_GET['vehicle_id']) ? (int)$_GET['vehicle_id'] : null),
+            'maintenances' => $pagination['data'],
             'vehicles' => $vehicleModel->all(),
             'totals' => $maintenanceModel->totalByVehicle(),
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'queryParams' => [
+                'vehicle_id' => $vehicleId,
+            ],
         ]);
     }
 

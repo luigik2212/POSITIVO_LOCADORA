@@ -12,7 +12,9 @@ class Rental extends BaseModel
                     COALESCE(fin.total_lancamentos, 0) AS financeiro_total_lancamentos,
                     COALESCE(fin.total_pago, 0) AS financeiro_total_pago,
                     COALESCE(fin.total_pendente, 0) AS financeiro_total_pendente,
-                    COALESCE(fin.qtd_lancamentos, 0) AS financeiro_qtd_lancamentos
+                    COALESCE(fin.qtd_lancamentos, 0) AS financeiro_qtd_lancamentos,
+                    COALESCE(fines.total_multas, 0) AS total_multas_valor,
+                    COALESCE(fines.qtd_multas, 0) AS total_multas_qtd
                 FROM rentals r
                 JOIN clients c ON c.id = r.client_id
                 JOIN vehicles v ON v.id = r.vehicle_id
@@ -26,6 +28,12 @@ class Rental extends BaseModel
                     WHERE rental_id IS NOT NULL
                     GROUP BY rental_id
                 ) fin ON fin.rental_id = r.id
+                LEFT JOIN (
+                    SELECT rental_id, SUM(valor) AS total_multas, COUNT(*) AS qtd_multas
+                    FROM rental_fines
+                    WHERE status <> 'cancelada'
+                    GROUP BY rental_id
+                ) fines ON fines.rental_id = r.id
                 WHERE 1=1";
         $params = [];
 
@@ -85,7 +93,9 @@ class Rental extends BaseModel
             COALESCE(fin.total_lancamentos, 0) AS financeiro_total_lancamentos,
             COALESCE(fin.total_pago, 0) AS financeiro_total_pago,
             COALESCE(fin.total_pendente, 0) AS financeiro_total_pendente,
-            COALESCE(fin.qtd_lancamentos, 0) AS financeiro_qtd_lancamentos
+            COALESCE(fin.qtd_lancamentos, 0) AS financeiro_qtd_lancamentos,
+            COALESCE(fines.total_multas, 0) AS total_multas_valor,
+            COALESCE(fines.qtd_multas, 0) AS total_multas_qtd
             FROM rentals r
             JOIN clients c ON c.id = r.client_id
             JOIN vehicles v ON v.id = r.vehicle_id
@@ -99,6 +109,12 @@ class Rental extends BaseModel
                 WHERE rental_id IS NOT NULL
                 GROUP BY rental_id
             ) fin ON fin.rental_id = r.id
+            LEFT JOIN (
+                SELECT rental_id, SUM(valor) AS total_multas, COUNT(*) AS qtd_multas
+                FROM rental_fines
+                WHERE status <> 'cancelada'
+                GROUP BY rental_id
+            ) fines ON fines.rental_id = r.id
             WHERE r.id=:id");
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;
