@@ -81,6 +81,12 @@ class Checklist extends BaseModel
             $map[$rentalId][$tipo]['attachments'][] = $attachment;
         }
 
+        foreach ($map as $rentalId => $checklists) {
+            foreach ($checklists as $tipo => $checklist) {
+                $map[$rentalId][$tipo]['attachments'] = array_values($checklist['attachments'] ?? []);
+            }
+        }
+
         return $map;
     }
 

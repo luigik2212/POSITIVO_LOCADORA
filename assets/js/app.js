@@ -20,7 +20,10 @@ function formatMoneyBr(value) {
 function renderChecklistAttachments(targetId, checklist) {
   const target = document.getElementById(targetId);
   if (!target) return;
-  const attachments = Array.isArray(checklist?.attachments) ? checklist.attachments : [];
+  const attachmentsRaw = checklist?.attachments;
+  const attachments = Array.isArray(attachmentsRaw)
+    ? attachmentsRaw
+    : (attachmentsRaw && typeof attachmentsRaw === 'object' ? Object.values(attachmentsRaw) : []);
   if (!attachments.length) {
     target.innerHTML = 'Nenhum anexo.';
     return;
