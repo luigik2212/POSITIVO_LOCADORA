@@ -197,6 +197,41 @@ class FinancialEntry extends BaseModel
         }
     }
 
+    public function syncFutureReceivablesByRental(array $rental): void
+    {
+        $rentalId = (int)($rental['id'] ?? 0);
+        if ($rentalId <= 0) {
+            return;
+        }
+
+        if (($rental['tipo_cobranca'] ?? '') === 'semanal') {
+            $delete = $this->db->prepare("DELETE FROM financial_entries
+                WHERE rental_id = :rental_id
+                  AND categoria = 'locacao_semanal'
+                  AND pagamento_status = 'nao_pago'
+                  AND data_movimentacao >= CURDATE()");
+            $delete->execute(['rental_id' => $rentalId]);
+
+            $this->generateWeeklyRentalChargesByRental($rental, true);
+            return;
+        }
+
+        $update = $this->db->prepare("UPDATE financial_entries
+            SET data_movimentacao = :data_movimentacao,
+                referencia_data = :referencia_data,
+                valor = :valor
+            WHERE rental_id = :rental_id
+              AND categoria = 'locacao'
+              AND pagamento_status = 'nao_pago'
+              AND data_movimentacao >= CURDATE()");
+        $update->execute([
+            'data_movimentacao' => $rental['data_inicio'],
+            'referencia_data' => $rental['data_inicio'],
+            'valor' => (float)$rental['valor_total_previsto'],
+            'rental_id' => $rentalId,
+        ]);
+    }
+
     public function sumByVehicleAndType(int $vehicleId, string $type, ?string $from = null, ?string $to = null): float
     {
         $sql = 'SELECT SUM(valor) FROM financial_entries WHERE vehicle_id = :vehicle_id AND tipo = :tipo';

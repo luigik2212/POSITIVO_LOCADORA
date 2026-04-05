@@ -80,6 +80,12 @@ class Rental extends BaseModel
         $stmt->execute($data);
     }
 
+    public function updateActiveContract(array $data): void
+    {
+        $stmt = $this->db->prepare('UPDATE rentals SET tempo_contrato=:tempo_contrato, dia_semana_vencimento=:dia_semana_vencimento, data_inicio=:data_inicio, data_prevista_termino=:data_prevista_termino, valor_total_previsto=:valor_total_previsto, observacoes=:observacoes WHERE id=:id AND status="ativa"');
+        $stmt->execute($data);
+    }
+
     public function cancel(int $id): void
     {
         $stmt = $this->db->prepare('UPDATE rentals SET status = "cancelada" WHERE id=:id');

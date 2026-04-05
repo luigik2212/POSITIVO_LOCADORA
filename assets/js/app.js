@@ -118,6 +118,38 @@ function fillFinalize(rental) {
   if (field) field.value = rental.id;
 }
 
+function openRentalEdit(rental) {
+  const checklistsMap = window.rentalChecklistsMap || {};
+  const rentalChecklists = checklistsMap[rental.id] || {};
+  const entrega = rentalChecklists.entrega || {};
+  const devolucao = rentalChecklists.devolucao || {};
+
+  const setValue = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? '';
+  };
+
+  setValue('edit_rental_id', rental.id);
+  setValue('edit_tipo_cobranca', rental.tipo_cobranca || '');
+  setValue('edit_tempo_contrato', rental.tempo_contrato || 1);
+  setValue('edit_data_inicio', rental.data_inicio || '');
+  setValue('edit_data_prevista_termino', rental.data_prevista_termino || '');
+  setValue('edit_dia_semana_vencimento', rental.dia_semana_vencimento || 'segunda');
+  setValue('edit_observacoes', rental.observacoes || '');
+
+  const weeklyWrap = document.getElementById('edit_dia_semana_wrap');
+  if (weeklyWrap) {
+    weeklyWrap.classList.toggle('d-none', rental.tipo_cobranca !== 'semanal');
+  }
+
+  ['lataria', 'pneus', 'vidros', 'combustivel', 'limpeza', 'interior', 'acessorios', 'avarias', 'observacoes'].forEach((field) => {
+    const sourceEntrega = field === 'interior' ? entrega.interior_estado : entrega[field];
+    const sourceDevolucao = field === 'interior' ? devolucao.interior_estado : devolucao[field];
+    setValue(`edit_checklist_entrega_${field}`, sourceEntrega || '');
+    setValue(`edit_checklist_devolucao_${field}`, sourceDevolucao || '');
+  });
+}
+
 function openRentalView(rental) {
   const rentalFinesMap = window.rentalFinesMap || {};
   const fines = Array.isArray(rentalFinesMap[rental.id]) ? rentalFinesMap[rental.id] : [];
@@ -154,6 +186,7 @@ function openRentalView(rental) {
   const devolverBtn = document.getElementById('view_devolver_btn');
   const fineRentalId = document.getElementById('fine_rental_id');
   const addFineBtn = document.getElementById('view_add_fine_btn');
+  const editBtn = document.getElementById('view_edit_btn');
   const finesList = document.getElementById('view_fines_list');
   if (cancelId) cancelId.value = rental.id;
   if (fineRentalId) fineRentalId.value = rental.id;
@@ -164,6 +197,9 @@ function openRentalView(rental) {
     addFineBtn.onclick = () => {
       if (fineRentalId) fineRentalId.value = rental.id;
     };
+  }
+  if (editBtn) {
+    editBtn.onclick = () => openRentalEdit(rental);
   }
   if (finesList) {
     if (!fines.length) {
