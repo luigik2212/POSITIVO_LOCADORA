@@ -28,7 +28,15 @@ class Checklist extends BaseModel
     {
         $stmt = $this->db->prepare('UPDATE checklists SET lataria=:lataria, pneus=:pneus, vidros=:vidros, combustivel=:combustivel, limpeza=:limpeza, interior_estado=:interior_estado, acessorios=:acessorios, avarias=:avarias, observacoes=:observacoes WHERE id=:id');
         $stmt->execute([
-            ...$data,
+            'lataria' => $data['lataria'] ?? null,
+            'pneus' => $data['pneus'] ?? null,
+            'vidros' => $data['vidros'] ?? null,
+            'combustivel' => $data['combustivel'] ?? null,
+            'limpeza' => $data['limpeza'] ?? null,
+            'interior_estado' => $data['interior_estado'] ?? null,
+            'acessorios' => $data['acessorios'] ?? null,
+            'avarias' => $data['avarias'] ?? null,
+            'observacoes' => $data['observacoes'] ?? null,
             'id' => $id,
         ]);
     }
