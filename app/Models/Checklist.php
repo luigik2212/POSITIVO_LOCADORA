@@ -49,42 +49,36 @@ class Checklist extends BaseModel
         }
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $this->db->prepare("SELECT * FROM checklists WHERE rental_id IN ($placeholders) ORDER BY id DESC");
-        $stmt->execute($ids);
-
         $map = [];
-        $checklistIds = [];
-        $checklistBucketById = [];
-        foreach ($stmt->fetchAll() as $checklist) {
+        $latestStmt = $this->db->prepare("SELECT c.*
+            FROM checklists c
+            INNER JOIN (
+                SELECT rental_id, tipo_checklist, MAX(id) AS latest_id
+                FROM checklists
+                WHERE rental_id IN ($placeholders)
+                GROUP BY rental_id, tipo_checklist
+            ) latest ON latest.latest_id = c.id");
+        $latestStmt->execute($ids);
+        foreach ($latestStmt->fetchAll() as $checklist) {
             $rentalId = (int)$checklist['rental_id'];
             $tipo = (string)$checklist['tipo_checklist'];
-            $checklistId = (int)$checklist['id'];
-            $checklistBucketById[$checklistId] = [$rentalId, $tipo];
-            if (!isset($map[$rentalId][$tipo])) {
-                $checklistIds[] = $checklistId;
-                $checklist['attachments'] = [];
-                $map[$rentalId][$tipo] = $checklist;
-                continue;
-            }
-
-            $checklistIds[] = $checklistId;
+            $checklist['attachments'] = [];
+            $map[$rentalId][$tipo] = $checklist;
         }
 
-        if ($checklistIds) {
-            $attachmentPlaceholders = implode(',', array_fill(0, count($checklistIds), '?'));
-            $attachmentStmt = $this->db->prepare("SELECT * FROM checklist_attachments WHERE checklist_id IN ($attachmentPlaceholders) ORDER BY id DESC");
-            $attachmentStmt->execute($checklistIds);
-            foreach ($attachmentStmt->fetchAll() as $attachment) {
-                $checklistId = (int)$attachment['checklist_id'];
-                if (!isset($checklistBucketById[$checklistId])) {
-                    continue;
-                }
-                [$rentalId, $tipo] = $checklistBucketById[$checklistId];
-                if (!isset($map[$rentalId][$tipo])) {
-                    continue;
-                }
-                $map[$rentalId][$tipo]['attachments'][] = $attachment;
+        $attachmentStmt = $this->db->prepare("SELECT a.*, c.rental_id, c.tipo_checklist
+            FROM checklist_attachments a
+            INNER JOIN checklists c ON c.id = a.checklist_id
+            WHERE c.rental_id IN ($placeholders)
+            ORDER BY a.id DESC");
+        $attachmentStmt->execute($ids);
+        foreach ($attachmentStmt->fetchAll() as $attachment) {
+            $rentalId = (int)$attachment['rental_id'];
+            $tipo = (string)$attachment['tipo_checklist'];
+            if (!isset($map[$rentalId][$tipo])) {
+                continue;
             }
+            $map[$rentalId][$tipo]['attachments'][] = $attachment;
         }
 
         return $map;
