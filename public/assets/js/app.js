@@ -140,9 +140,26 @@ function fillFinalize(rental) {
   if (field) field.value = rental.id;
 }
 
-function openRentalEdit(rental) {
+async function loadRentalChecklists(rentalId) {
+  try {
+    const response = await fetch(withBase(`/rentals/checklists?rental_id=${rentalId}`), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      return {};
+    }
+    const payload = await response.json();
+    return payload && typeof payload === 'object' ? payload : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+async function openRentalEdit(rental) {
   const checklistsMap = window.rentalChecklistsMap || {};
-  const rentalChecklists = checklistsMap[rental.id] || {};
+  const fetchedChecklists = await loadRentalChecklists(rental.id);
+  const rentalChecklists = Object.keys(fetchedChecklists).length ? fetchedChecklists : (checklistsMap[rental.id] || {});
   const entrega = rentalChecklists.entrega || {};
   const devolucao = rentalChecklists.devolucao || {};
 

@@ -101,6 +101,11 @@ class Checklist extends BaseModel
         return $stmt->fetch() ?: null;
     }
 
+    public function latestByRental(int $rentalId): array
+    {
+        return $this->byRentalIds([$rentalId])[$rentalId] ?? [];
+    }
+
     public function addAttachment(array $data): void
     {
         $stmt = $this->db->prepare('INSERT INTO checklist_attachments (checklist_id, tipo_arquivo, caminho_arquivo) VALUES (:checklist_id,:tipo_arquivo,:caminho_arquivo)');

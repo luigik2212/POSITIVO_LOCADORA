@@ -323,6 +323,20 @@ class RentalController extends Controller
         exit;
     }
 
+    public function checklistData(): void
+    {
+        $rentalId = (int)($_GET['rental_id'] ?? 0);
+        if ($rentalId <= 0) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['entrega' => null, 'devolucao' => null], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return;
+        }
+
+        $data = (new Checklist())->latestByRental($rentalId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
     private function saveChecklist(int $rentalId, string $tipo): void
     {
         if (empty($_POST['checklist_' . $tipo . '_lataria'])) {
