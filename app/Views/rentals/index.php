@@ -79,12 +79,14 @@
 <div class="col-12"><label class="form-label">Entrega - observações</label><textarea class="form-control" name="checklist_entrega_observacoes" id="edit_checklist_entrega_observacoes"></textarea></div>
 <div class="col-12"><label class="form-label">Anexos entrega (opcional)</label><input class="form-control" type="file" name="anexos_entrega[]" multiple accept="image/*,video/*"></div>
 <div class="col-12"><label class="form-label">Arquivos já anexados (entrega)</label><div id="edit_checklist_entrega_attachments" class="small text-muted">Nenhum anexo.</div></div>
-<hr>
-<h6 class="mt-2">Checklist de devolução (opcional)</h6>
-<?php foreach(['lataria','pneus','vidros','combustivel','limpeza','interior','acessorios','avarias'] as $it): ?><div class="col-md-3"><label class="form-label">Devolução - <?= ucfirst($it) ?></label><input class="form-control" name="checklist_devolucao_<?= $it ?>" id="edit_checklist_devolucao_<?= $it ?>"></div><?php endforeach; ?>
-<div class="col-12"><label class="form-label">Devolução - observações</label><textarea class="form-control" name="checklist_devolucao_observacoes" id="edit_checklist_devolucao_observacoes"></textarea></div>
-<div class="col-12"><label class="form-label">Anexos devolução (opcional)</label><input type="file" class="form-control" name="anexos_devolucao[]" multiple accept="image/*,video/*"></div>
-<div class="col-12"><label class="form-label">Arquivos já anexados (devolução)</label><div id="edit_checklist_devolucao_attachments" class="small text-muted">Nenhum anexo.</div></div>
+<div class="d-none" id="edit_devolucao_section">
+  <hr>
+  <h6 class="mt-2">Checklist de devolução (opcional)</h6>
+  <?php foreach(['lataria','pneus','vidros','combustivel','limpeza','interior','acessorios','avarias'] as $it): ?><div class="col-md-3"><label class="form-label">Devolução - <?= ucfirst($it) ?></label><input class="form-control" name="checklist_devolucao_<?= $it ?>" id="edit_checklist_devolucao_<?= $it ?>"></div><?php endforeach; ?>
+  <div class="col-12"><label class="form-label">Devolução - observações</label><textarea class="form-control" name="checklist_devolucao_observacoes" id="edit_checklist_devolucao_observacoes"></textarea></div>
+  <div class="col-12"><label class="form-label">Anexos devolução (opcional)</label><input type="file" class="form-control" name="anexos_devolucao[]" multiple accept="image/*,video/*"></div>
+  <div class="col-12"><label class="form-label">Arquivos já anexados (devolução)</label><div id="edit_checklist_devolucao_attachments" class="small text-muted">Nenhum anexo.</div></div>
+</div>
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-primary">Salvar alterações</button></div></form></div></div></div>
 
 <div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/rentals/fines/store') ?>"><div class="modal-header"><h5>Cadastrar multa</h5></div><div class="modal-body row g-2">

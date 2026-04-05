@@ -54,14 +54,20 @@ class Checklist extends BaseModel
 
         $map = [];
         $checklistIds = [];
+        $checklistBucketById = [];
         foreach ($stmt->fetchAll() as $checklist) {
             $rentalId = (int)$checklist['rental_id'];
             $tipo = (string)$checklist['tipo_checklist'];
+            $checklistId = (int)$checklist['id'];
+            $checklistBucketById[$checklistId] = [$rentalId, $tipo];
             if (!isset($map[$rentalId][$tipo])) {
-                $checklistIds[] = (int)$checklist['id'];
+                $checklistIds[] = $checklistId;
                 $checklist['attachments'] = [];
                 $map[$rentalId][$tipo] = $checklist;
+                continue;
             }
+
+            $checklistIds[] = $checklistId;
         }
 
         if ($checklistIds) {
@@ -70,15 +76,14 @@ class Checklist extends BaseModel
             $attachmentStmt->execute($checklistIds);
             foreach ($attachmentStmt->fetchAll() as $attachment) {
                 $checklistId = (int)$attachment['checklist_id'];
-                foreach ($map as $rentalId => $checklistsByType) {
-                    foreach ($checklistsByType as $tipo => $checklist) {
-                        if ((int)$checklist['id'] !== $checklistId) {
-                            continue;
-                        }
-                        $map[$rentalId][$tipo]['attachments'][] = $attachment;
-                        break 2;
-                    }
+                if (!isset($checklistBucketById[$checklistId])) {
+                    continue;
                 }
+                [$rentalId, $tipo] = $checklistBucketById[$checklistId];
+                if (!isset($map[$rentalId][$tipo])) {
+                    continue;
+                }
+                $map[$rentalId][$tipo]['attachments'][] = $attachment;
             }
         }
 

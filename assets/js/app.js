@@ -170,6 +170,12 @@ function openRentalEdit(rental) {
 
   renderChecklistAttachments('edit_checklist_entrega_attachments', entrega);
   renderChecklistAttachments('edit_checklist_devolucao_attachments', devolucao);
+
+  const returnSection = document.getElementById('edit_devolucao_section');
+  if (returnSection) {
+    const canShowReturnChecklist = rental.status === 'finalizada' || !!rental.data_real_termino;
+    returnSection.classList.toggle('d-none', !canShowReturnChecklist);
+  }
 }
 
 function openRentalView(rental) {
