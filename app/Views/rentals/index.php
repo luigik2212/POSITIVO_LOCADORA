@@ -42,8 +42,17 @@
   </div>
 </div>
 <div class="col-12"><strong>Observações:</strong> <span id="view_obs"></span></div>
+<div class="col-md-6">
+  <strong>Anexos checklist entrega:</strong>
+  <div id="view_entrega_attachments" class="small mt-1 text-muted">Nenhum anexo.</div>
+</div>
+<div class="col-md-6">
+  <strong>Anexos checklist devolução:</strong>
+  <div id="view_devolucao_attachments" class="small mt-1 text-muted">Nenhum anexo.</div>
+</div>
 <div class="col-12 d-none" id="view_actions_wrap">
   <div class="border rounded p-2 d-flex gap-2">
+    <button type="button" class="btn btn-primary btn-sm" id="view_edit_btn" data-bs-toggle="modal" data-bs-target="#editRentalModal" data-bs-dismiss="modal">Editar locação</button>
     <button type="button" class="btn btn-warning btn-sm" id="view_add_fine_btn" data-bs-toggle="modal" data-bs-target="#fineModal" data-bs-dismiss="modal">Adicionar multa</button>
     <button type="button" class="btn btn-success btn-sm" id="view_devolver_btn" data-bs-toggle="modal" data-bs-target="#finalizeModal" data-bs-dismiss="modal">Devolver antes do prazo</button>
     <form method="POST" action="<?= url('/rentals/cancel') ?>" class="d-inline" onsubmit="return confirm('Cancelar locação?')">
@@ -54,6 +63,31 @@
   </div>
 </div>
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button></div></div></div></div>
+
+<div class="modal fade" id="editRentalModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><form method="POST" action="<?= url('/rentals/update') ?>" enctype="multipart/form-data"><div class="modal-header"><h5>Editar locação</h5></div><div class="modal-body row g-2">
+<input type="hidden" name="_token" value="<?= csrfToken() ?>">
+<input type="hidden" name="id" id="edit_rental_id">
+<div class="col-md-3"><label class="form-label">Tipo cobrança</label><input type="text" class="form-control" id="edit_tipo_cobranca" readonly></div>
+<div class="col-md-3"><label class="form-label">Tempo contrato</label><input required type="number" min="1" name="tempo_contrato" id="edit_tempo_contrato" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">Início</label><input required type="date" name="data_inicio" id="edit_data_inicio" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">Término previsto</label><input required type="date" name="data_prevista_termino" id="edit_data_prevista_termino" class="form-control"></div>
+<div class="col-md-3 d-none" id="edit_dia_semana_wrap"><label class="form-label">Dia de vencimento semanal</label><select class="form-select" name="dia_semana_vencimento" id="edit_dia_semana_vencimento"><option>segunda</option><option>terca</option><option>quarta</option><option>quinta</option><option>sexta</option><option>sabado</option><option>domingo</option></select></div>
+<div class="col-12"><label class="form-label">Observações</label><textarea class="form-control" name="observacoes" id="edit_observacoes"></textarea></div>
+<hr>
+<h6 class="mt-2">Checklist de entrega</h6>
+<?php foreach(['lataria','pneus','vidros','combustivel','limpeza','interior','acessorios','avarias'] as $it): ?><div class="col-md-3"><label class="form-label">Entrega - <?= ucfirst($it) ?></label><input class="form-control" name="checklist_entrega_<?= $it ?>" id="edit_checklist_entrega_<?= $it ?>"></div><?php endforeach; ?>
+<div class="col-12"><label class="form-label">Entrega - observações</label><textarea class="form-control" name="checklist_entrega_observacoes" id="edit_checklist_entrega_observacoes"></textarea></div>
+<div class="col-12"><label class="form-label">Anexos entrega (opcional)</label><input class="form-control" type="file" name="anexos_entrega[]" multiple accept="image/*,video/*"></div>
+<div class="col-12"><label class="form-label">Arquivos já anexados (entrega)</label><div id="edit_checklist_entrega_attachments" class="small text-muted">Nenhum anexo.</div></div>
+<div class="d-none" id="edit_devolucao_section">
+  <hr>
+  <h6 class="mt-2">Checklist de devolução (opcional)</h6>
+  <?php foreach(['lataria','pneus','vidros','combustivel','limpeza','interior','acessorios','avarias'] as $it): ?><div class="col-md-3"><label class="form-label">Devolução - <?= ucfirst($it) ?></label><input class="form-control" name="checklist_devolucao_<?= $it ?>" id="edit_checklist_devolucao_<?= $it ?>"></div><?php endforeach; ?>
+  <div class="col-12"><label class="form-label">Devolução - observações</label><textarea class="form-control" name="checklist_devolucao_observacoes" id="edit_checklist_devolucao_observacoes"></textarea></div>
+  <div class="col-12"><label class="form-label">Anexos devolução (opcional)</label><input type="file" class="form-control" name="anexos_devolucao[]" multiple accept="image/*,video/*"></div>
+  <div class="col-12"><label class="form-label">Arquivos já anexados (devolução)</label><div id="edit_checklist_devolucao_attachments" class="small text-muted">Nenhum anexo.</div></div>
+</div>
+</div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-primary">Salvar alterações</button></div></form></div></div></div>
 
 <div class="modal fade" id="fineModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="POST" action="<?= url('/rentals/fines/store') ?>"><div class="modal-header"><h5>Cadastrar multa</h5></div><div class="modal-body row g-2">
 <input type="hidden" name="_token" value="<?= csrfToken() ?>">
@@ -96,5 +130,6 @@
 </div><div class="modal-footer"><button type="button" data-bs-dismiss="modal" class="btn btn-secondary">Fechar</button><button class="btn btn-success">Finalizar</button></div></form></div></div></div>
 <script>
   window.rentalFinesMap = <?= json_encode($rentalFines ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  window.rentalChecklistsMap = <?= json_encode($rentalChecklists ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <?php require __DIR__ . '/../partials/footer.php'; ?>

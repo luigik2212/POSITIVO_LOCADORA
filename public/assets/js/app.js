@@ -17,6 +17,28 @@ function formatMoneyBr(value) {
   return `R$ ${amount.toFixed(2).replace('.', ',')}`;
 }
 
+function renderChecklistAttachments(targetId, checklist) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const attachmentsRaw = checklist?.attachments;
+  const attachments = Array.isArray(attachmentsRaw)
+    ? attachmentsRaw
+    : (attachmentsRaw && typeof attachmentsRaw === 'object' ? Object.values(attachmentsRaw) : []);
+  if (!attachments.length) {
+    target.innerHTML = 'Nenhum anexo.';
+    return;
+  }
+
+  target.innerHTML = attachments.map((attachment) => {
+    const checklistId = checklist?.id;
+    const attachmentId = attachment?.id;
+    const path = attachment?.caminho_arquivo || '';
+    const filename = path.split('/').pop() || `anexo_${attachmentId}`;
+    const href = withBase(`/rentals/checklist-attachment-download?checklist_id=${checklistId}&attachment_id=${attachmentId}`);
+    return `<a href="${href}" class="d-block" target="_blank" rel="noopener">${filename}</a>`;
+  }).join('');
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
@@ -118,9 +140,71 @@ function fillFinalize(rental) {
   if (field) field.value = rental.id;
 }
 
+async function loadRentalChecklists(rentalId) {
+  try {
+    const response = await fetch(withBase(`/rentals/checklists?rental_id=${rentalId}`), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      return {};
+    }
+    const payload = await response.json();
+    return payload && typeof payload === 'object' ? payload : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+async function openRentalEdit(rental) {
+  const checklistsMap = window.rentalChecklistsMap || {};
+  const fetchedChecklists = await loadRentalChecklists(rental.id);
+  const rentalChecklists = Object.keys(fetchedChecklists).length ? fetchedChecklists : (checklistsMap[rental.id] || {});
+  const entrega = rentalChecklists.entrega || {};
+  const devolucao = rentalChecklists.devolucao || {};
+
+  const setValue = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? '';
+  };
+
+  setValue('edit_rental_id', rental.id);
+  setValue('edit_tipo_cobranca', rental.tipo_cobranca || '');
+  setValue('edit_tempo_contrato', rental.tempo_contrato || 1);
+  setValue('edit_data_inicio', rental.data_inicio || '');
+  setValue('edit_data_prevista_termino', rental.data_prevista_termino || '');
+  setValue('edit_dia_semana_vencimento', rental.dia_semana_vencimento || 'segunda');
+  setValue('edit_observacoes', rental.observacoes || '');
+
+  const weeklyWrap = document.getElementById('edit_dia_semana_wrap');
+  if (weeklyWrap) {
+    weeklyWrap.classList.toggle('d-none', rental.tipo_cobranca !== 'semanal');
+  }
+
+  ['lataria', 'pneus', 'vidros', 'combustivel', 'limpeza', 'interior', 'acessorios', 'avarias', 'observacoes'].forEach((field) => {
+    const sourceEntrega = field === 'interior' ? entrega.interior_estado : entrega[field];
+    const sourceDevolucao = field === 'interior' ? devolucao.interior_estado : devolucao[field];
+    setValue(`edit_checklist_entrega_${field}`, sourceEntrega || '');
+    setValue(`edit_checklist_devolucao_${field}`, sourceDevolucao || '');
+  });
+
+  renderChecklistAttachments('edit_checklist_entrega_attachments', entrega);
+  renderChecklistAttachments('edit_checklist_devolucao_attachments', devolucao);
+
+  const returnSection = document.getElementById('edit_devolucao_section');
+  if (returnSection) {
+    const canShowReturnChecklist = rental.status === 'finalizada' || !!rental.data_real_termino;
+    returnSection.classList.toggle('d-none', !canShowReturnChecklist);
+  }
+}
+
 function openRentalView(rental) {
   const rentalFinesMap = window.rentalFinesMap || {};
+  const checklistsMap = window.rentalChecklistsMap || {};
   const fines = Array.isArray(rentalFinesMap[rental.id]) ? rentalFinesMap[rental.id] : [];
+  const rentalChecklists = checklistsMap[rental.id] || {};
+  const entrega = rentalChecklists.entrega || {};
+  const devolucao = rentalChecklists.devolucao || {};
   const finesTotal = fines.reduce((total, fine) => total + Number(fine.valor || 0), 0);
 
   const map = {
@@ -154,6 +238,7 @@ function openRentalView(rental) {
   const devolverBtn = document.getElementById('view_devolver_btn');
   const fineRentalId = document.getElementById('fine_rental_id');
   const addFineBtn = document.getElementById('view_add_fine_btn');
+  const editBtn = document.getElementById('view_edit_btn');
   const finesList = document.getElementById('view_fines_list');
   if (cancelId) cancelId.value = rental.id;
   if (fineRentalId) fineRentalId.value = rental.id;
@@ -164,6 +249,9 @@ function openRentalView(rental) {
     addFineBtn.onclick = () => {
       if (fineRentalId) fineRentalId.value = rental.id;
     };
+  }
+  if (editBtn) {
+    editBtn.onclick = () => openRentalEdit(rental);
   }
   if (finesList) {
     if (!fines.length) {
@@ -184,6 +272,9 @@ function openRentalView(rental) {
   if (actionsWrap) {
     actionsWrap.classList.toggle('d-none', rental.status !== 'ativa');
   }
+
+  renderChecklistAttachments('view_entrega_attachments', entrega);
+  renderChecklistAttachments('view_devolucao_attachments', devolucao);
 }
 
 function updatePricePreview() {

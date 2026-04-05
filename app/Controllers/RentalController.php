@@ -21,6 +21,7 @@ class RentalController extends Controller
         $clientModel = new Client();
         $vehicleModel = new Vehicle();
         $fineModel = new TrafficFine();
+        $checklistModel = new Checklist();
 
         $status = $_GET['status'] ?? 'ativa';
         $filters = [
@@ -33,13 +34,15 @@ class RentalController extends Controller
         ];
 
         $rentals = $rentalModel->all($filters);
+        $rentalIds = array_map(static fn (array $rental): int => (int)$rental['id'], $rentals);
 
         $this->view('rentals/index', [
             'rentals' => $rentals,
             'clients' => $clientModel->all(),
             'vehicles' => $vehicleModel->available(),
             'allVehicles' => $vehicleModel->all(),
-            'rentalFines' => $fineModel->byRentalIds(array_map(static fn (array $rental): int => (int)$rental['id'], $rentals)),
+            'rentalFines' => $fineModel->byRentalIds($rentalIds),
+            'rentalChecklists' => $checklistModel->byRentalIds($rentalIds),
             'filters' => $filters,
         ]);
     }
@@ -162,6 +165,54 @@ class RentalController extends Controller
         $this->redirect('/rentals');
     }
 
+    public function update(): void
+    {
+        validateCsrf();
+
+        $rentalId = (int)($_POST['id'] ?? 0);
+        $rentalModel = new Rental();
+        $rental = $rentalModel->find($rentalId);
+
+        if (!$rental) {
+            flash('error', 'Locação não encontrada.');
+            $this->redirect('/rentals');
+        }
+        if (($rental['status'] ?? '') !== 'ativa') {
+            flash('error', 'Somente locações ativas podem ser editadas.');
+            $this->redirect('/rentals');
+        }
+
+        $tempo = max(1, (int)($_POST['tempo_contrato'] ?? $rental['tempo_contrato']));
+        $dataInicio = (string)($_POST['data_inicio'] ?? $rental['data_inicio']);
+        $dataPrevistaTermino = (string)($_POST['data_prevista_termino'] ?? $rental['data_prevista_termino']);
+        $diaSemanaVencimento = $rental['tipo_cobranca'] === 'semanal'
+            ? (string)($_POST['dia_semana_vencimento'] ?? $rental['dia_semana_vencimento'])
+            : null;
+        $observacoes = trim((string)($_POST['observacoes'] ?? $rental['observacoes'] ?? ''));
+        $valorTotalPrevisto = (float)$rental['valor_cobranca'] * $tempo;
+
+        $rentalModel->updateActiveContract([
+            'id' => $rentalId,
+            'tempo_contrato' => $tempo,
+            'dia_semana_vencimento' => $diaSemanaVencimento,
+            'data_inicio' => $dataInicio,
+            'data_prevista_termino' => $dataPrevistaTermino,
+            'valor_total_previsto' => $valorTotalPrevisto,
+            'observacoes' => $observacoes,
+        ]);
+
+        $updatedRental = $rentalModel->find($rentalId);
+        if ($updatedRental) {
+            (new FinancialEntry())->syncFutureReceivablesByRental($updatedRental);
+        }
+
+        $this->saveChecklist($rentalId, 'entrega');
+        $this->saveChecklist($rentalId, 'devolucao');
+
+        flash('success', 'Locação atualizada com sucesso.');
+        $this->redirect('/rentals');
+    }
+
     public function cancel(): void
     {
         validateCsrf();
@@ -241,6 +292,51 @@ class RentalController extends Controller
         $this->redirect('/rentals');
     }
 
+    public function downloadChecklistAttachment(): void
+    {
+        $checklistId = (int)($_GET['checklist_id'] ?? 0);
+        $attachmentId = (int)($_GET['attachment_id'] ?? 0);
+
+        if ($checklistId <= 0 || $attachmentId <= 0) {
+            http_response_code(404);
+            exit('Anexo não encontrado.');
+        }
+
+        $attachment = (new Checklist())->findAttachmentByChecklist($attachmentId, $checklistId);
+        if (!$attachment) {
+            http_response_code(404);
+            exit('Anexo não encontrado.');
+        }
+
+        $filePath = APP_ROOT . (string)$attachment['caminho_arquivo'];
+        if (!is_file($filePath)) {
+            http_response_code(404);
+            exit('Arquivo não encontrado.');
+        }
+
+        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        $filename = basename((string)$attachment['caminho_arquivo']);
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . (string)filesize($filePath));
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        readfile($filePath);
+        exit;
+    }
+
+    public function checklistData(): void
+    {
+        $rentalId = (int)($_GET['rental_id'] ?? 0);
+        if ($rentalId <= 0) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['entrega' => null, 'devolucao' => null], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return;
+        }
+
+        $data = (new Checklist())->latestByRental($rentalId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
     private function saveChecklist(int $rentalId, string $tipo): void
     {
         if (empty($_POST['checklist_' . $tipo . '_lataria'])) {
@@ -248,7 +344,7 @@ class RentalController extends Controller
         }
 
         $checklistModel = new Checklist();
-        $checklistId = $checklistModel->create([
+        $payload = [
             'rental_id' => $rentalId,
             'tipo_checklist' => $tipo,
             'lataria' => $_POST['checklist_' . $tipo . '_lataria'],
@@ -260,7 +356,14 @@ class RentalController extends Controller
             'acessorios' => $_POST['checklist_' . $tipo . '_acessorios'],
             'avarias' => $_POST['checklist_' . $tipo . '_avarias'],
             'observacoes' => $_POST['checklist_' . $tipo . '_observacoes'] ?? null,
-        ]);
+        ];
+        $existingChecklist = $checklistModel->findByRentalAndType($rentalId, $tipo);
+        if ($existingChecklist) {
+            $checklistModel->update((int)$existingChecklist['id'], $payload);
+            $checklistId = (int)$existingChecklist['id'];
+        } else {
+            $checklistId = $checklistModel->create($payload);
+        }
 
         $inputName = 'anexos_' . $tipo;
         if (!isset($_FILES[$inputName])) {
