@@ -292,6 +292,37 @@ class RentalController extends Controller
         $this->redirect('/rentals');
     }
 
+    public function downloadChecklistAttachment(): void
+    {
+        $checklistId = (int)($_GET['checklist_id'] ?? 0);
+        $attachmentId = (int)($_GET['attachment_id'] ?? 0);
+
+        if ($checklistId <= 0 || $attachmentId <= 0) {
+            http_response_code(404);
+            exit('Anexo não encontrado.');
+        }
+
+        $attachment = (new Checklist())->findAttachmentByChecklist($attachmentId, $checklistId);
+        if (!$attachment) {
+            http_response_code(404);
+            exit('Anexo não encontrado.');
+        }
+
+        $filePath = APP_ROOT . (string)$attachment['caminho_arquivo'];
+        if (!is_file($filePath)) {
+            http_response_code(404);
+            exit('Arquivo não encontrado.');
+        }
+
+        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        $filename = basename((string)$attachment['caminho_arquivo']);
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . (string)filesize($filePath));
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        readfile($filePath);
+        exit;
+    }
+
     private function saveChecklist(int $rentalId, string $tipo): void
     {
         if (empty($_POST['checklist_' . $tipo . '_lataria'])) {

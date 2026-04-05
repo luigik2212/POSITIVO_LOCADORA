@@ -42,6 +42,7 @@ $router->post('/rentals/update', [RentalController::class, 'update'], true);
 $router->post('/rentals/finalize', [RentalController::class, 'finalize'], true);
 $router->post('/rentals/cancel', [RentalController::class, 'cancel'], true);
 $router->post('/rentals/fines/store', [RentalController::class, 'storeFine'], true);
+$router->get('/rentals/checklist-attachment-download', [RentalController::class, 'downloadChecklistAttachment'], true);
 
 $router->get('/maintenances', [MaintenanceController::class, 'index'], true);
 $router->get('/maintenances/report', [MaintenanceController::class, 'report'], true);

@@ -17,6 +17,25 @@ function formatMoneyBr(value) {
   return `R$ ${amount.toFixed(2).replace('.', ',')}`;
 }
 
+function renderChecklistAttachments(targetId, checklist) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const attachments = Array.isArray(checklist?.attachments) ? checklist.attachments : [];
+  if (!attachments.length) {
+    target.innerHTML = 'Nenhum anexo.';
+    return;
+  }
+
+  target.innerHTML = attachments.map((attachment) => {
+    const checklistId = checklist?.id;
+    const attachmentId = attachment?.id;
+    const path = attachment?.caminho_arquivo || '';
+    const filename = path.split('/').pop() || `anexo_${attachmentId}`;
+    const href = withBase(`/rentals/checklist-attachment-download?checklist_id=${checklistId}&attachment_id=${attachmentId}`);
+    return `<a href="${href}" class="d-block" target="_blank" rel="noopener">${filename}</a>`;
+  }).join('');
+}
+
 function openVehicleModal(vehicle = null) {
   const form = document.getElementById('vehicleForm');
   if (!form) return;
@@ -148,11 +167,18 @@ function openRentalEdit(rental) {
     setValue(`edit_checklist_entrega_${field}`, sourceEntrega || '');
     setValue(`edit_checklist_devolucao_${field}`, sourceDevolucao || '');
   });
+
+  renderChecklistAttachments('edit_checklist_entrega_attachments', entrega);
+  renderChecklistAttachments('edit_checklist_devolucao_attachments', devolucao);
 }
 
 function openRentalView(rental) {
   const rentalFinesMap = window.rentalFinesMap || {};
+  const checklistsMap = window.rentalChecklistsMap || {};
   const fines = Array.isArray(rentalFinesMap[rental.id]) ? rentalFinesMap[rental.id] : [];
+  const rentalChecklists = checklistsMap[rental.id] || {};
+  const entrega = rentalChecklists.entrega || {};
+  const devolucao = rentalChecklists.devolucao || {};
   const finesTotal = fines.reduce((total, fine) => total + Number(fine.valor || 0), 0);
 
   const map = {
@@ -220,6 +246,9 @@ function openRentalView(rental) {
   if (actionsWrap) {
     actionsWrap.classList.toggle('d-none', rental.status !== 'ativa');
   }
+
+  renderChecklistAttachments('view_entrega_attachments', entrega);
+  renderChecklistAttachments('view_devolucao_attachments', devolucao);
 }
 
 function updatePricePreview() {

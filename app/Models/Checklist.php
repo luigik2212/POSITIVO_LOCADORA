@@ -53,15 +53,47 @@ class Checklist extends BaseModel
         $stmt->execute($ids);
 
         $map = [];
+        $checklistIds = [];
         foreach ($stmt->fetchAll() as $checklist) {
             $rentalId = (int)$checklist['rental_id'];
             $tipo = (string)$checklist['tipo_checklist'];
             if (!isset($map[$rentalId][$tipo])) {
+                $checklistIds[] = (int)$checklist['id'];
+                $checklist['attachments'] = [];
                 $map[$rentalId][$tipo] = $checklist;
             }
         }
 
+        if ($checklistIds) {
+            $attachmentPlaceholders = implode(',', array_fill(0, count($checklistIds), '?'));
+            $attachmentStmt = $this->db->prepare("SELECT * FROM checklist_attachments WHERE checklist_id IN ($attachmentPlaceholders) ORDER BY id DESC");
+            $attachmentStmt->execute($checklistIds);
+            foreach ($attachmentStmt->fetchAll() as $attachment) {
+                $checklistId = (int)$attachment['checklist_id'];
+                foreach ($map as $rentalId => $checklistsByType) {
+                    foreach ($checklistsByType as $tipo => $checklist) {
+                        if ((int)$checklist['id'] !== $checklistId) {
+                            continue;
+                        }
+                        $map[$rentalId][$tipo]['attachments'][] = $attachment;
+                        break 2;
+                    }
+                }
+            }
+        }
+
         return $map;
+    }
+
+    public function findAttachmentByChecklist(int $attachmentId, int $checklistId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM checklist_attachments WHERE id = :id AND checklist_id = :checklist_id LIMIT 1');
+        $stmt->execute([
+            'id' => $attachmentId,
+            'checklist_id' => $checklistId,
+        ]);
+
+        return $stmt->fetch() ?: null;
     }
 
     public function addAttachment(array $data): void
